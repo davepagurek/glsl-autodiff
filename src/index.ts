@@ -1,5 +1,3 @@
-import { round } from 'lodash'
-
 type Input = Op | number
 
 abstract class Op {
@@ -20,7 +18,7 @@ abstract class Op {
 
   public ref(): string {
     if (this.usedIn.length > 0) {
-      return `__glslad_v${this.id}`
+      return `_glslad_v${this.id}`
     } else {
       return `(${this.definition()})`
     }
@@ -28,7 +26,7 @@ abstract class Op {
 
   public derivRef(param: Param): string {
     if (this.usedIn.length > 0) {
-      return `__glslad_dv${this.id}_d${param.name}`
+      return `_glslad_dv${this.id}_d${param.name}`
     } else {
       return `(${this.derivative(param)})`
     }
@@ -66,6 +64,7 @@ abstract class Op {
   }
 
   // Chaining helpers
+  public add(...params: Input[]) { return this.ad.add(this, ...params) }
   public sum(...params: Input[]) { return this.ad.sum(this, ...params) }
   public sub(b: Input) { return this.ad.sub(this, b) }
   public neg() { return this.ad.neg(this) }
@@ -84,7 +83,14 @@ abstract class Op {
   public abstract derivative(param: Param): string
 }
 
-class Param extends Op {
+abstract class OpLiteral extends Op {
+  public override initializer() { return '' }
+  public override derivInitializer() { return '' }
+  public override ref() { return this.definition() }
+  public override derivRef(param: Param) { return this.derivative(param) }
+}
+
+class Param extends OpLiteral {
   public name: string
 
   constructor(ad: AutoDiff, name: string) {
@@ -93,17 +99,17 @@ class Param extends Op {
   }
 
   isConst() { return false }
-  definition() { return '' } // unused
+  definition() { return this.name }
   derivative(param: Param) {
     if (param === this) {
-      return '1'
+      return '1.0'
     } else {
-      return '0'
+      return '0.0'
     }
   }
 }
 
-class Value extends Op {
+class Value extends OpLiteral {
   private val: number
 
   constructor(ad: AutoDiff, val: number) {
@@ -112,8 +118,8 @@ class Value extends Op {
   }
 
   isConst() { return true }
-  definition() { return `${round(this.val, 4)}` }
-  derivative() { return '0' }
+  definition() { return `${this.val.toFixed(4)}` }
+  derivative() { return '0.0' }
 }
 
 class Neg extends Op {
@@ -198,7 +204,7 @@ class Mix extends Op {
   }
 }
 
-class AutoDiff {
+export class AutoDiff {
   private nextID = 0
   public getNextID(): number {
     const id = this.nextID
@@ -223,6 +229,7 @@ class AutoDiff {
 
   public val(n: number) { return new Value(this, n) }
   public sum(...params: Input[]) { return new Sum(this, ...this.convertVals(params)) }
+  public add(...params: Input[]) { return new Sum(this, ...this.convertVals(params)) }
   public sub(a: Input, b: Input) {
     const [opA, opB] = this.convertVals([a, b])
     return this.sum(opA, this.neg(opB))
@@ -301,6 +308,8 @@ class AutoDiff {
     }
 
     for (const param in this.derivOutputs) {
+      const paramOp = this.params[param]
+
       // Add initializers for derivative outputs
       const derivDeps = new Set<Op>()
       for (const name in this.derivOutputs[param]) {
@@ -310,11 +319,10 @@ class AutoDiff {
         derivDeps.add(this.derivOutputs[param][name])
       }
       for (const dep of derivDeps.values()) {
-        code += dep.initializer()
+        code += dep.derivInitializer(paramOp)
       }
 
       // Add derivative outputs
-      const paramOp = this.params[param]
       for (const name in this.derivOutputs[param]) {
         code += `float ${name}=${this.derivOutputs[param][name].derivRef(paramOp)};\n`
       }
@@ -331,3 +339,9 @@ class AutoDiff {
     return ad.gen()
   }
 }
+
+
+declare global {
+  interface Window { AutoDiff: any; }
+}
+window.AutoDiff = window.AutoDiff || AutoDiff
