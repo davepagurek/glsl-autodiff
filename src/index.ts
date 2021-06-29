@@ -4,23 +4,47 @@ abstract class Op {
   protected ad: AutoDiff
   public id: number
   public dependsOn: Op[]
-  public usesdIn: Op[]
+  public usedIn: Op[]
   public static key: string
 
   constructor(ad: AutoDiff, ...params: Op[]) {
     this.id = ad.getNextID()
     this.dependsOn = params
     for (const param of params) {
-      param.usesdIn.push(this)
+      param.usedIn.push(this)
     }
   }
 
   public ref(): string {
-    return `v${this.id}`
+    if (this.usedIn.length > 0) {
+      return `v${this.id}`
+    } else {
+      return `(${this.definition()})`
+    }
   }
 
   public derivRef(param: Param): string {
-    return `dv${this.id}_d${param.name}`
+    if (this.usedIn.length > 0) {
+      return `dv${this.id}_d${param.name}`
+    } else {
+      return `(${this.derivative(param)})`
+    }
+  }
+
+  public initializer(): string {
+    if (this.usedIn.length > 0) {
+      return `float ${this.ref()}=${this.definition()};`
+    } else {
+      return ''
+    }
+  }
+
+  public derivInitializer(param: Param): string {
+    if (this.usedIn.length > 0) {
+      return `float ${this.derivRef(param)}=${this.derivative(param)};`
+    } else {
+      return ''
+    }
   }
 
   public isConst(): boolean {
@@ -124,6 +148,27 @@ class Sin extends Op {
   }
 }
 
+class Cos extends Op {
+  definition() {
+    return `cos(${this.dependsOn[0].ref()})`
+  }
+  derivative(param: Param) {
+    return `-sin(${this.dependsOn[0].ref()})*${this.dependsOn[0].derivRef(param)}`
+  }
+}
+
+class Mix extends Op {
+  definition() {
+    return `mix(${this.dependsOn.map((op) => op.ref()).join(',')})`
+  }
+  derivative(param: Param) {
+    const [a, b, mix] = this.dependsOn
+    const aDeriv = `${a.ref()}*${mix.derivRef(param)}+${a.derivRef(param)}*${mix.ref()}`
+    const bDeriv = `${b.ref()}*${mix.derivRef(param)}+${b.derivRef(param)}*${mix.ref()}`
+    return `${aDeriv}+${bDeriv}`
+  }
+}
+
 type Input = Op | number
 class AutoDiff {
   private nextID = 0
@@ -133,14 +178,15 @@ class AutoDiff {
     return id
   }
 
+  private convertVal(param: Input): Op {
+    if (param instanceof Op) {
+      return param
+    } else {
+      return this.val(param)
+    }
+  }
   private convertVals(params: Input[]): Op[] {
-    return params.map((param) => {
-      if (param instanceof Op) {
-        return param
-      } else {
-        return this.val(param)
-      }
-    })
+    return params.map((param) => this.convertVal(param))
   }
 
   public val(n: number) { return new Value(this, n) }
@@ -149,7 +195,7 @@ class AutoDiff {
     const [opA, opB] = this.convertVals([a, b])
     return this.sum(opA, this.neg(opB))
   }
-  public neg(v: Input) { return new Neg(this, this.convertVals([v])[0]) }
+  public neg(v: Input) { return new Neg(this, this.convertVal(v)) }
   public mult(...params: Input[]) {
     if (params.length === 2) {
       return new Mult(this, ...this.convertVals(params))
@@ -167,7 +213,14 @@ class AutoDiff {
     const [opA, opB] = this.convertVals([a, b])
     return new Pow(this, opA, opB)
   }
-  public sqrt(v: Input) { return new Pow(this, this.convertVals([v])[0], this.val(0.5)) }
+  public sqrt(v: Input) { return new Pow(this, this.convertVal(v), this.val(0.5)) }
+  public sin(v: Input) { return new Sin(this, this.convertVal(v)) }
+  public cos(v: Input) { return new Cos(this, this.convertVal(v)) }
+  public tan(v: Input) {
+    const op = this.convertVal(v)
+    return this.div(this.sin(op), this.cos(op))
+  }
+  public mix(a: Input, b: Input, mix: Input) { return new Mix(this, ...this.convertVals([a, b, mix])) }
   public e() { return this.val(Math.E) }
   public pi() { return this.val(Math.PI) }
 
