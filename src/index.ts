@@ -1,13 +1,16 @@
 import { round } from 'lodash'
 
+type Input = Op | number
+
 abstract class Op {
   protected ad: AutoDiff
   public id: number
   public dependsOn: Op[]
-  public usedIn: Op[]
+  public usedIn: Op[] = []
   public static key: string
 
   constructor(ad: AutoDiff, ...params: Op[]) {
+    this.ad = ad
     this.id = ad.getNextID()
     this.dependsOn = params
     for (const param of params) {
@@ -17,7 +20,7 @@ abstract class Op {
 
   public ref(): string {
     if (this.usedIn.length > 0) {
-      return `v${this.id}`
+      return `__glslad_v${this.id}`
     } else {
       return `(${this.definition()})`
     }
@@ -25,7 +28,7 @@ abstract class Op {
 
   public derivRef(param: Param): string {
     if (this.usedIn.length > 0) {
-      return `dv${this.id}_d${param.name}`
+      return `__glslad_dv${this.id}_d${param.name}`
     } else {
       return `(${this.derivative(param)})`
     }
@@ -33,7 +36,7 @@ abstract class Op {
 
   public initializer(): string {
     if (this.usedIn.length > 0) {
-      return `float ${this.ref()}=${this.definition()};`
+      return `float ${this.ref()}=${this.definition()};\n`
     } else {
       return ''
     }
@@ -41,7 +44,7 @@ abstract class Op {
 
   public derivInitializer(param: Param): string {
     if (this.usedIn.length > 0) {
-      return `float ${this.derivRef(param)}=${this.derivative(param)};`
+      return `float ${this.derivRef(param)}=${this.derivative(param)};\n`
     } else {
       return ''
     }
@@ -50,6 +53,32 @@ abstract class Op {
   public isConst(): boolean {
     return this.dependsOn.every((op) => op.isConst())
   }
+
+  public deepDependencies(): Set<Op> {
+    const deps = new Set<Op>()
+    for (const op of this.dependsOn) {
+      for (const dep of op.deepDependencies().values()) {
+        deps.add(dep)
+      }
+      deps.add(op)
+    }
+    return deps
+  }
+
+  // Chaining helpers
+  public sum(...params: Input[]) { return this.ad.sum(this, ...params) }
+  public sub(b: Input) { return this.ad.sub(this, b) }
+  public neg() { return this.ad.neg(this) }
+  public mult(...params: Input[]) { return this.ad.mult(this, ...params) }
+  public div(b: Input) { return this.ad.div(this, b) }
+  public pow(b: Input) { return this.ad.pow(this, b) }
+  public sqrt() { return this.ad.sqrt(this) }
+  public sin() { return this.ad.sin(this) }
+  public cos() { return this.ad.cos(this) }
+  public tan() { return this.ad.cos(this) }
+  public mix(b: Input, mix: Input) { return this.ad.mix(this, b, mix) }
+  public output(name: string) { return this.ad.output(name, this) }
+  public outputDeriv(name: string, param: Param | string) { return this.ad.outputDeriv(name, param, this) }
 
   public abstract definition(): string
   public abstract derivative(param: Param): string
@@ -169,7 +198,6 @@ class Mix extends Op {
   }
 }
 
-type Input = Op | number
 class AutoDiff {
   private nextID = 0
   public getNextID(): number {
@@ -177,6 +205,10 @@ class AutoDiff {
     this.nextID++
     return id
   }
+
+  private params: { [key: string]: Param } = {}
+  private outputs: { [key: string]: Op } = {}
+  private derivOutputs: { [param: string]: { [key: string]: Op } } = {}
 
   private convertVal(param: Input): Op {
     if (param instanceof Op) {
@@ -224,5 +256,78 @@ class AutoDiff {
   public e() { return this.val(Math.E) }
   public pi() { return this.val(Math.PI) }
 
+  public param(name: string) {
+    const op = new Param(this, name)
+    this.params[name] = op
+    return op
+  }
+
+  public output(name: string, op: Op) {
+    this.outputs[name] = op
+  }
+
+  public outputDeriv(name: string, param: Param | string, op: Op) {
+    const paramName = typeof param === 'string' ? param : param.name
+    this.derivOutputs[paramName] = this.derivOutputs[paramName] || {}
+    this.derivOutputs[paramName][name] = op
+  }
+
+  public gen(): string {
+    let code = ''
+
+    // Add initializers for outputs
+    const deps = new Set<Op>()
+    for (const name in this.outputs) {
+      for (const dep of this.outputs[name].deepDependencies().values()) {
+        deps.add(dep)
+      }
+      deps.add(this.outputs[name])
+    }
+    for (const param in this.derivOutputs) {
+      for (const name in this.derivOutputs[param]) {
+        for (const dep of this.derivOutputs[param][name].deepDependencies().values()) {
+          deps.add(dep)
+        }
+        deps.add(this.derivOutputs[param][name])
+      }
+    }
+    for (const dep of deps.values()) {
+      code += dep.initializer()
+    }
+
+    // Add outputs
+    for (const name in this.outputs) {
+      code += `float ${name}=${this.outputs[name].ref()};\n`
+    }
+
+    for (const param in this.derivOutputs) {
+      // Add initializers for derivative outputs
+      const derivDeps = new Set<Op>()
+      for (const name in this.derivOutputs[param]) {
+        for (const dep of this.derivOutputs[param][name].deepDependencies().values()) {
+          derivDeps.add(dep)
+        }
+        derivDeps.add(this.derivOutputs[param][name])
+      }
+      for (const dep of derivDeps.values()) {
+        code += dep.initializer()
+      }
+
+      // Add derivative outputs
+      const paramOp = this.params[param]
+      for (const name in this.derivOutputs[param]) {
+        code += `float ${name}=${this.derivOutputs[param][name].derivRef(paramOp)};\n`
+      }
+    }
+
+    return code
+  }
+
   constructor() {}
+
+  public static gen(cb: (ad: AutoDiff) => Op): string {
+    const ad = new AutoDiff()
+    cb(ad)
+    return ad.gen()
+  }
 }
