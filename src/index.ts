@@ -76,6 +76,11 @@ abstract class Op {
   public cos() { return this.ad.cos(this) }
   public tan() { return this.ad.cos(this) }
   public mix(b: Input, mix: Input) { return this.ad.mix(this, b, mix) }
+  public clamp(min: Input, max: Input) { return this.ad.clamp(this, min, max) }
+  public min(other: Input) { return this.ad.min(this, other) }
+  public max(other: Input) { return this.ad.max(this, other) }
+  public ifelse(thenOp: Input, elseOp: Input) { return this.ad.ifelse(this, thenOp, elseOp) }
+
   public output(name: string) { return this.ad.output(name, this) }
   public outputDeriv(name: string, param: Param | string) { return this.ad.outputDeriv(name, param, this) }
 
@@ -204,6 +209,47 @@ class Mix extends Op {
   }
 }
 
+class Clamp extends Op {
+  definition() {
+    return `clamp(${this.dependsOn.map((op) => op.ref()).join(',')})`
+  }
+  derivative(param: Param) {
+    const [v, min, max] = this.dependsOn
+    return `${v.ref()}<${min.ref()} ? 0.0 : (${v.ref()}>${max.ref()} ? 0.0 : ${v.derivRef(param)})`
+  }
+}
+
+class Min extends Op {
+  definition() {
+    return `min(${this.dependsOn.map((op) => op.ref()).join(',')})`
+  }
+  derivative(param: Param) {
+    const [a, b] = this.dependsOn
+    return `${a.ref()}<${b.ref()} ? ${a.derivRef(param)} : ${b.derivRef(param)}`
+  }
+}
+
+class Max extends Op {
+  definition() {
+    return `max(${this.dependsOn.map((op) => op.ref()).join(',')})`
+  }
+  derivative(param: Param) {
+    const [a, b] = this.dependsOn
+    return `${a.ref()}>${b.ref()} ? ${a.derivRef(param)} : ${b.derivRef(param)}`
+  }
+}
+
+class IfElse extends Op {
+  definition() {
+    const [condition, thenOp, elseOp] = this.dependsOn
+    return `${condition.ref()}?${thenOp.ref()}:${elseOp.ref()}`
+  }
+  derivative(param: Param) {
+    const [condition, thenOp, elseOp] = this.dependsOn
+    return `${condition.ref()}?${thenOp.derivRef(param)}:${elseOp.derivRef(param)}`
+  }
+}
+
 export class AutoDiff {
   private nextID = 0
   public getNextID(): number {
@@ -260,6 +306,10 @@ export class AutoDiff {
     return this.div(this.sin(op), this.cos(op))
   }
   public mix(a: Input, b: Input, mix: Input) { return new Mix(this, ...this.convertVals([a, b, mix])) }
+  public clamp(v: Input, min: Input, max: Input) { return new Clamp(this, ...this.convertVals([v, min, max])) }
+  public min(a: Input, b: Input) { return new Min(this, ...this.convertVals([a, b])) }
+  public max(a: Input, b: Input) { return new Max(this, ...this.convertVals([a, b])) }
+  public ifelse(cond: Input, thenOp: Input, elseOp: Input) { return new IfElse(this, ...this.convertVals([cond, thenOp, elseOp])) }
   public e() { return this.val(Math.E) }
   public pi() { return this.val(Math.PI) }
 
