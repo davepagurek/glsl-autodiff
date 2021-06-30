@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "lib": ["es2015", "dom"],
+    "outDir": "build",
+    "allowJs": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "noImplicitAny": false,
+    "downlevelIteration": true,
+    "module": "commonjs",
+    "strictPropertyInitialization": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "removeComments": true,
+    "target": "es6",
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "downlevelIteration": true
+  },
+  "include": ["./src"],
+  "exclude": [
+    "node_modules",
+    "*/node_modules"
+  ]
+}
