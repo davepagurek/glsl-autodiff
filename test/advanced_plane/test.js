@@ -43,16 +43,16 @@ void main(void) {
             ad.sin(timeScaledDist.mult(6)),
             ad.sin(timeScaledDist),
             -1
-          ).clamp(0, 10),
+          ).max(0),
         2)
       )
     }
     
     let offset = ad.val(0)
-    offset = offset.add(displace_sin(x, y, ad.sin(time).mult(2), time.mult(5), ad.val(5), ad.val(2*Math.PI/8)))
-    offset = offset.add(displace_sin(x, y, ad.sin(time.add(10)).add(5).mult(0.5), time.mult(5).add(50), ad.val(10), ad.val(2*Math.PI*0.4)))
+    offset = offset.add(displace_sin(x, y, ad.sin(time).mult(0.5), time.mult(5), ad.val(5), ad.val(2*Math.PI/8)))
+    offset = offset.add(displace_sin(x, y, ad.sin(time.add(10)).add(5).mult(0.15), time.mult(5).add(50), ad.val(10), ad.val(2*Math.PI*0.4)))
     offset = offset.sub(displace_rad(x, y, ad.sin(time).add(1), time.mult(1.5).add(8), ad.val(4), ad.val(-0.5), ad.val(-0.5)))
-    offset = offset.mult(0.05)
+    offset = offset.mult(0.08)
     
     offset.output('z')
     offset.outputDeriv('dzdx', x)

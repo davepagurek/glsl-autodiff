@@ -17,7 +17,7 @@ abstract class Op {
   }
 
   public ref(): string {
-    if (this.usedIn.length > 0) {
+    if (this.usedIn.length > 1) {
       return `_glslad_v${this.id}`
     } else {
       return `(${this.definition()})`
@@ -25,7 +25,7 @@ abstract class Op {
   }
 
   public derivRef(param: Param): string {
-    if (this.usedIn.length > 0) {
+    if (this.usedIn.length > 1) {
       return `_glslad_dv${this.id}_d${param.name}`
     } else {
       return `(${this.derivative(param)})`
@@ -33,7 +33,7 @@ abstract class Op {
   }
 
   public initializer(): string {
-    if (this.usedIn.length > 0) {
+    if (this.usedIn.length > 1) {
       return `float ${this.ref()}=${this.definition()};\n`
     } else {
       return ''
@@ -41,7 +41,7 @@ abstract class Op {
   }
 
   public derivInitializer(param: Param): string {
-    if (this.usedIn.length > 0) {
+    if (this.usedIn.length > 1) {
       return `float ${this.derivRef(param)}=${this.derivative(param)};\n`
     } else {
       return ''
@@ -171,8 +171,8 @@ class Pow extends Op {
   }
   derivative(param: Param) {
     const [a, b] = this.dependsOn
-    if (this.isConst()) {
-      return `${b.ref()}*pow(${a.ref()},${b.ref()}-1)`
+    if (b.isConst()) {
+      return `${b.ref()}*pow(${a.ref()},${b.ref()}-1.0)`
     } else {
       return `pow(${a.ref()},${b.ref()})*log(${a.ref()})*${b.derivRef(param)}`
     }
