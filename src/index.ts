@@ -173,8 +173,23 @@ class Pow extends Op {
     const [a, b] = this.dependsOn
     if (b.isConst()) {
       return `${b.ref()}*pow(${a.ref()},${b.ref()}-1.0)`
-    } else {
+    } else if (a.isConst()) {
       return `pow(${a.ref()},${b.ref()})*log(${a.ref()})*${b.derivRef(param)}`
+    } else {
+      // f = a^b
+      // ln(f) = ln(a^b)                                   ln() both sides
+      // ln(f) = b*ln(a)                                   logarithm rules
+      // e^(lnf) = e^(b*ln(a))                             exp() both sides
+      // f = e^(b*ln(a))                                   simplify
+      // d/dx f = d/dx e^(b*ln(a))                         differentiate both sides
+      // d/dx f = e^(b*ln(a)) * d/dx b*ln(a)               derivative of e^u
+      // d/dx f = a^b * d/dx b*ln(a)                       exponential rules
+      // d/dx f = a^b * (b*(1/a * da/dx) + ln(a)*(db/dx))  product rule
+      //          t1         t2                 t3
+      const t1 = `pow(${a.ref()},${b.ref()})`
+      const t2 = `${b.ref()}*(1.0/${a.ref()}*${a.derivRef(param)})`
+      const t3 = `log(${a.ref()})*${b.derivRef(param)}`
+      return `${t1}*(${t2}+${t3})`
     }
   }
 }
