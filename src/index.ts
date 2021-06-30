@@ -198,7 +198,7 @@ class Mix extends Op {
   }
   derivative(param: Param) {
     const [a, b, mix] = this.dependsOn
-    const aDeriv = `${a.ref()}*${mix.derivRef(param)}+${a.derivRef(param)}*${mix.ref()}`
+    const aDeriv = `(1.0-${a.ref()})*${mix.derivRef(param)}+(-${a.derivRef(param)})*${mix.ref()}`
     const bDeriv = `${b.ref()}*${mix.derivRef(param)}+${b.derivRef(param)}*${mix.ref()}`
     return `${aDeriv}+${bDeriv}`
   }
