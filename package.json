@@ -9,12 +9,14 @@
   },
   "devDependencies": {
     "@types/node": "^15.12.5",
+    "gh-pages": "^3.2.3",
     "ts-loader": "^9.2.3",
     "typescript": "^4.3.4",
     "webpack": "^5.41.1",
     "webpack-cli": "^4.7.2"
   },
   "scripts": {
-    "build": "yarn run webpack"
+    "build": "yarn run webpack",
+    "deploy": "yarn build && yarn run gh-pages -d ."
   }
 }
