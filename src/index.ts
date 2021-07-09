@@ -10,7 +10,7 @@ import { WithVecFunctions } from './vecFunctions'
 @WithVecBase
 @WithVecArithmetic
 @WithVecFunctions
-class AutoDiff implements ADBase {
+class AutoDiffImpl implements ADBase {
   protected nextID = 0
   public getNextID(): number {
     const id = this.nextID
@@ -107,8 +107,8 @@ class AutoDiff implements ADBase {
 }
 
 const AutoDiffGenerator = {
-  gen(cb: (ad: AutoDiff) => Op): string {
-    const ad = new AutoDiff()
+  gen(cb: (ad: AutoDiffImpl) => Op): string {
+    const ad = new AutoDiffImpl()
     cb(ad)
     return ad.gen()
   }
@@ -118,3 +118,5 @@ declare global {
   interface Window { AutoDiff: typeof AutoDiffGenerator }
 }
 window.AutoDiff = window.AutoDiff || AutoDiffGenerator
+
+export const AutoDiff = AutoDiffGenerator
