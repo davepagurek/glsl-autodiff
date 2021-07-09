@@ -23,7 +23,7 @@ module.exports = (env, argv) => {
   }
 
   if (mode === 'development') {
-    config.devtool = 'source-map'
+    config.devtool = 'inline-source-map'
   }
 
   return config

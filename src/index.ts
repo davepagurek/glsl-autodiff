@@ -106,7 +106,7 @@ const ExtendedAD = WithVecFunctions(WithVecArithmetic(WithVecBase(WithFunctions(
 type GetType<T> = T extends new (...args: any[]) => infer V ? V : never
 type AD = GetType<typeof ExtendedAD>
 
-export namespace AutoDiff {
+namespace AutoDiff {
   export const gen = (cb: (ad: AD) => void): string => {
     const ad = new ExtendedAD()
     cb(ad)
@@ -118,3 +118,5 @@ declare global {
   interface Window { AutoDiff: typeof AutoDiff }
 }
 window.AutoDiff = window.AutoDiff || AutoDiff
+
+export { AutoDiff as default }
