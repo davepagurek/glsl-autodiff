@@ -27,7 +27,8 @@
   "scripts": {
     "build": "yarn generate:js",
     "generate:js": "yarn run webpack",
-    "deploy": "yarn build && yarn run gh-pages -d ."
+    "deploy": "yarn build && yarn run gh-pages -d .",
+    "publish": "npm publish --access public"
   },
   "files": [
     "build"
