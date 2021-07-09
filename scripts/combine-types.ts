@@ -20,6 +20,6 @@ typeFiles.forEach(({ name }) => {
   combined += types
     .replace(/^import.*$/mg, '')
     .replace(/import\(".\/[^"]+"\)\./g, '')
-    .replace(/declare module '[^']+' \{\n([^}]+)\}/mg, '$1')
+    .replace(/declare module '[^']+' \{\n([^}]+)\}/mg, 'export $1')
 })
 fs.writeFileSync(path.resolve(buildDirectory, outFile), combined)
