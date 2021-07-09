@@ -57,7 +57,7 @@ export function Cache(target: Object, propertyKey: string, descriptor: PropertyD
   return descriptor
 }
 
-export abstract class VectorOp extends Op implements VecOp {
+export abstract class VectorOp extends Op {
   scalar() { return false }
 
   abstract size(): number

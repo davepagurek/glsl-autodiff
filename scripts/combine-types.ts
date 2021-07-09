@@ -17,6 +17,9 @@ typeFiles.forEach(({ name }) => {
   const types = fs.readFileSync(path.resolve(buildDirectory, name), 'utf8')
 
   // Remove imports for now
-  combined += types.replace(/^import.*\n/g, '')
+  combined += types
+    .replace(/^import.*$/mg, '')
+    .replace(/import\(".\/[^"]+"\)\./g, '')
+    .replace(/declare module '[^']+' \{\n([^}]+)\}/mg, '$1')
 })
 fs.writeFileSync(path.resolve(buildDirectory, outFile), combined)
