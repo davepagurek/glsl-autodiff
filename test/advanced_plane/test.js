@@ -38,13 +38,11 @@ void main(void) {
       const timeScaledDist = t.add(dist.mult(waviness))
 
       return magnitude.mult(
-        ad.pow(
-          ad.sum(
-            ad.sin(timeScaledDist.mult(6)),
-            ad.sin(timeScaledDist),
-            -1
-          ).max(0),
-        2)
+        ad.sum(
+          ad.sin(timeScaledDist.mult(6)),
+          ad.sin(timeScaledDist),
+          -1
+        ).max(0).pow(2),
       )
     }
     
