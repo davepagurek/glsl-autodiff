@@ -15,7 +15,9 @@ module.exports = (env, argv) => {
     },
     output: {
       filename: 'autodiff.js',
-      path: path.resolve(__dirname, 'build')
+      path: path.resolve(__dirname, 'build'),
+      libraryTarget: 'umd',
+      library: 'AutoDiff',
     },
     resolve: {
       extensions: ['.tsx', '.ts', '.jsx', '.js']
