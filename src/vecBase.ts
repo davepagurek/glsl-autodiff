@@ -1,4 +1,4 @@
-import { Op, AutoDiff as ADBase, Param, Input, ADConstructor } from './base'
+import { Op, OpLiteral, AutoDiff as ADBase, Param, Input, ADConstructor } from './base'
 
 export interface VecOp extends Op {
   x(): Op
@@ -22,13 +22,34 @@ export class VecElementRef extends Op {
   derivative(param: Param) { return `${this.dependsOn[0].derivRef(param)}.${this.prop}` }
 }
 
-export const Cache = (target: Object, propertyKey: string, descriptor: PropertyDescriptor) => {
+export class VecParamElementRef extends OpLiteral {
+  public prop: string
+  public name: string
+
+  constructor(ad: ADBase, prop: string, vec: VecOp) {
+    super(ad, vec)
+    this.prop = prop
+    this.name = `_glslad_r${vec.id}_${prop}`
+    this.ad.registerParam(this, this.name)
+  }
+
+  definition() { return `${this.dependsOn[0].ref()}.${this.prop}` }
+  derivative(param: Param) {
+    if (param === this) {
+      return '1.0'
+    } else {
+      return '0.0'
+    }
+  }
+}
+
+export function Cache(target: Object, propertyKey: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value
   let created = false
   let cached: any = undefined
-  descriptor.value = (...args: any[]) => {
+  descriptor.value = function(...args: any[]) {
     if (!created) {
-      cached = originalMethod(...args)
+      cached = originalMethod.apply(this, ...args)
       created = true
     }
     return cached
@@ -217,7 +238,7 @@ export class Vec extends VectorOp {
   }
 
   public override initializer(): string {
-    if (this.usedIn.length > 1) {
+    if (this.useTempVar()) {
       return `vec${this.size()} ${this.ref()}=${this.definition()};\n`
     } else {
       return ''
@@ -225,7 +246,11 @@ export class Vec extends VectorOp {
   }
 
   public override derivInitializer(param: Param): string {
-    return ''
+    if (this.useTempVar()) {
+      return `vec${this.size()} ${this.derivRef(param)}=${this.derivative(param)};\n`
+    } else {
+      return ''
+    }
   }
 
   definition() {
@@ -247,20 +272,44 @@ export class VecParam extends VectorOp {
   public size() { return this._size }
 
   constructor(ad: ADBase, name: string, size: number) {
-    super(ad, ...'xyzw'.split('').slice(0, size).map((el) => new Param(ad, `${name}.${el}`)))
+    super(ad)
     this.name = name
     this._size = size
   }
 
+  @Cache
+  public x(): Op { return new VecParamElementRef(this.ad, 'x', this) }
+
+  @Cache
+  public y(): Op { return new VecParamElementRef(this.ad, 'y', this) }
+
+  @Cache
+  public z(): Op { return new VecParamElementRef(this.ad, 'z', this) }
+
+  @Cache
+  public w(): Op { return new VecParamElementRef(this.ad, 'w', this) }
+
+  private getElems() {
+    return 'xyzw'
+      .split('')
+      .slice(0, this.size())
+      .map((el) => this.getVecElementRef(el))
+  }
+
   definition() { return this.name }
   derivative(param: Param) {
-    return `vec${this.size()}(${this.dependsOn.map((el) => el === param ? '1.0' : '0.0').join(',')})`
+    return `vec${this.size()}(${this.getElems().map((el) => el.derivRef(param)).join(',')})`
   }
 
   public override initializer() { return '' }
-  public override derivInitializer() { return '' }
   public override ref() { return this.definition() }
-  public override derivRef(param: Param) { return this.derivative(param) }
+  public override derivInitializer(param: Param) {
+    if (this.useTempVar()) {
+      return `vec${this.size()} ${this.derivRef(param)}=${this.derivative(param)};\n`
+    } else {
+      return ''
+    }
+  }
 }
 
 export function WithVecBase<T extends ADConstructor>(Base: T) {

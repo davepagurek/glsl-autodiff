@@ -121,7 +121,7 @@ export class Dist extends WithVecDependencies {
       .map((el) => {
         const diff = this.dependsOn.map((v) => v.ref()).join('-')
         const derivDiff = this.dependsOn.map((v) => v.derivRef(param)).join('-')
-        return `2.0*(${diff})*(${derivDiff})`
+        return `2.0*(${diff}).${el}*(${derivDiff}).${el}`
       })
       .join('+')
     return `${outerDeriv}*${innerDeriv}`

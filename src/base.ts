@@ -3,7 +3,7 @@ export type Input = Op | number
 export interface AutoDiff {
   getNextID(): number
   val(n: number): Value
-  registerParam(param: Param, name: string)
+  registerParam(param: Op, name: string)
   param(name: string): Param
   convertVal(param: Input): Op
   convertVals(params: Input[]): Op[]
@@ -30,8 +30,12 @@ export abstract class Op {
 
   public scalar() { return true }
 
+  public useTempVar() {
+    return this.usedIn.length > 1
+  }
+
   public ref(): string {
-    if (this.usedIn.length > 1) {
+    if (this.useTempVar()) {
       return `_glslad_v${this.id}`
     } else {
       return `(${this.definition()})`
@@ -39,7 +43,7 @@ export abstract class Op {
   }
 
   public derivRef(param: Param): string {
-    if (this.usedIn.length > 1) {
+    if (this.useTempVar()) {
       return `_glslad_dv${this.id}_d${param.name}`
     } else {
       return `(${this.derivative(param)})`
@@ -47,7 +51,7 @@ export abstract class Op {
   }
 
   public initializer(): string {
-    if (this.usedIn.length > 1) {
+    if (this.useTempVar()) {
       return `float ${this.ref()}=${this.definition()};\n`
     } else {
       return ''
@@ -55,7 +59,7 @@ export abstract class Op {
   }
 
   public derivInitializer(param: Param): string {
-    if (this.usedIn.length > 1) {
+    if (this.useTempVar()) {
       return `float ${this.derivRef(param)}=${this.derivative(param)};\n`
     } else {
       return ''
