@@ -1,6 +1,6 @@
 {
   "name": "@davepagurek/glsl-autodiff",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "main": "src/index.ts",
   "author": "Dave Pagurek <dave@davepagurek.com>",
   "license": "MIT",
