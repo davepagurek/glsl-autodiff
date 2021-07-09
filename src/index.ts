@@ -5,11 +5,6 @@ import { WithVecBase } from './vecBase'
 import { WithVecArithmetic } from './vecArithmetic'
 import { WithVecFunctions } from './vecFunctions'
 
-@WithFunctions
-@WithArithmetic
-@WithVecBase
-@WithVecArithmetic
-@WithVecFunctions
 class AutoDiffImpl implements ADBase {
   protected nextID = 0
   public getNextID(): number {
@@ -106,17 +101,21 @@ class AutoDiffImpl implements ADBase {
   }
 }
 
-const AutoDiffGenerator = {
-  gen(cb: (ad: AutoDiffImpl) => Op): string {
-    const ad = new AutoDiffImpl()
+// TODO figure out a better way of writing this that Typescript can still infer the type of
+const ExtendedAD = WithVecFunctions(WithVecArithmetic(WithVecBase(WithFunctions(WithArithmetic(AutoDiffImpl)))))
+type GetType<T> = T extends new (...args: any[]) => infer V ? V : never
+type AD = GetType<typeof ExtendedAD>
+
+namespace AutoDiff {
+  export const gen = (cb: (ad: AD) => Op): string => {
+    const ad = new ExtendedAD()
     cb(ad)
     return ad.gen()
   }
 }
 
 declare global {
-  interface Window { AutoDiff: typeof AutoDiffGenerator }
+  interface Window { AutoDiff: AutoDiffImpl }
 }
-window.AutoDiff = window.AutoDiff || AutoDiffGenerator
-
-export const AutoDiff = AutoDiffGenerator
+window.AutoDiff = window.AutoDiff || AutoDiff
+export default AutoDiff
