@@ -4,6 +4,15 @@
   "main": "src/index.ts",
   "author": "Dave Pagurek <dave@davepagurek.com>",
   "license": "MIT",
+  "types": "build/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davepagurek/glsl-autodiff.git"
+  },
+  "bugs": {
+    "url": "https://github.com/davepagurek/glsl-autodiff/issues"
+  },
+  "homepage": "https://github.com/davepagurek/glsl-autodiff",
   "dependencies": {
     "lodash": "^4.17.21"
   },
