@@ -16,47 +16,39 @@ varying vec3 vPosition;
 void main(void) {
   vec4 objSpacePosition = vec4(aPosition, 1.0);
   float origZ = objSpacePosition.z;
-  float x = aTexCoord.x;
-  float y = aTexCoord.y;
   ${AutoDiff.gen((ad) => {
-    const x = ad.param('x')
-    const y = ad.param('y')
+    const aTexCoord = ad.vec2Param('aTexCoord')
     const time = ad.param('time')
-    
-    const dot = (x1, y1, x2, y2) => x1.mult(x2).add(y1.mult(y2))
-    const length = (x, y) => ad.sqrt(x.mult(x).add(y.mult(y)))
-    
-    const displace_sin = (coordX, coordY, magnitude, t, waviness, angle) => {
-     const cos_angle = ad.cos(angle)
-     const sin_angle = ad.sin(angle)
-     const dist = dot(coordX, coordY, cos_angle, sin_angle)
-     return magnitude.mult(ad.sin(t.add(dist.mult(waviness))))
+
+    const displace_sin = (vec, magnitude, t, waviness, angle) => {
+      const cos_angle = ad.cos(angle)
+      const sin_angle = ad.sin(angle)
+      const dist = vec.dot(ad.vec2(cos_angle, sin_angle))
+      return magnitude.mult(ad.sin(t.add(dist.mult(waviness))))
    }
     
-    const displace_rad = (coordX, coordY, magnitude, t, waviness, centerX, centerY) => {
-      const dist = length(centerX.sub(coordX), centerY.sub(coordY))
+    const displace_rad = (vec, magnitude, t, waviness, center) => {
+      const dist = vec.dist(center)
       const timeScaledDist = t.add(dist.mult(waviness))
 
       return magnitude.mult(
-        ad.pow(
-          ad.sum(
-            ad.sin(timeScaledDist.mult(6)),
-            ad.sin(timeScaledDist),
-            -1
-          ).max(0),
-        2)
+        ad.sum(
+          ad.sin(timeScaledDist.mult(6)),
+          ad.sin(timeScaledDist),
+          -1
+        ).max(0).pow(2),
       )
     }
     
     let offset = ad.val(0)
-    offset = offset.add(displace_sin(x, y, ad.sin(time).mult(0.5), time.mult(5), ad.val(5), ad.val(2*Math.PI/8)))
-    offset = offset.add(displace_sin(x, y, ad.sin(time.add(10)).add(5).mult(0.15), time.mult(5).add(50), ad.val(10), ad.val(2*Math.PI*0.4)))
-    offset = offset.sub(displace_rad(x, y, ad.sin(time).add(1), time.mult(1.5).add(8), ad.val(4), ad.val(-0.5), ad.val(-0.5)))
+    offset = offset.add(displace_sin(aTexCoord, ad.sin(time).mult(0.5), time.mult(5), ad.val(5), ad.val(2*Math.PI/8)))
+    offset = offset.add(displace_sin(aTexCoord, ad.sin(time.add(10)).add(5).mult(0.15), time.mult(5).add(50), ad.val(10), ad.val(2*Math.PI*0.4)))
+    offset = offset.sub(displace_rad(aTexCoord, ad.sin(time).add(1), time.mult(1.5).add(8), ad.val(4), ad.vec2(-0.5, -0.5)))
     offset = offset.mult(0.08)
     
     offset.output('z')
-    offset.outputDeriv('dzdx', x)
-    offset.outputDeriv('dzdy', y)
+    offset.outputDeriv('dzdx', aTexCoord.x())
+    offset.outputDeriv('dzdy', aTexCoord.y())
   })}
   objSpacePosition.z += z;
   vec3 slopeX = vec3(1.0, 0.0, dzdx);
