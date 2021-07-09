@@ -1,4 +1,4 @@
-import { Input, Param, AutoDiff as ADBase, ADConstructor } from './base'
+import { Input, Param, ADBase, ADConstructor } from './base'
 import { VectorOp, WithVecDependencies } from './vecBase'
 
 export class VecNeg extends WithVecDependencies {

@@ -1,4 +1,4 @@
-import { Input, Param, Op, Value, AutoDiff as ADBase } from './base'
+import { Input, Param, Op, Value, ADBase } from './base'
 import { WithArithmetic } from './arithmetic'
 import { WithFunctions } from './functions'
 import { WithVecBase } from './vecBase'

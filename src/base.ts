@@ -1,25 +1,25 @@
 export type Input = Op | number
 
-export interface AutoDiff {
+export interface ADBase {
   getNextID(): number
   val(n: number): Value
   registerParam(param: Op, name: string)
   param(name: string): Param
   convertVal(param: Input): Op
   convertVals(params: Input[]): Op[]
-  output(name: string, op: Op): AutoDiff
-  outputDeriv(name: string, param: Param | string, op: Op): AutoDiff
+  output(name: string, op: Op): ADBase
+  outputDeriv(name: string, param: Param | string, op: Op): ADBase
 }
 
-export type ADConstructor = new (...args: any[]) => AutoDiff
+export type ADConstructor = new (...args: any[]) => ADBase
 
 export abstract class Op {
-  protected ad: AutoDiff
+  protected ad: ADBase
   public id: number
   public dependsOn: Op[]
   public usedIn: Op[] = []
 
-  constructor(ad: AutoDiff, ...params: Op[]) {
+  constructor(ad: ADBase, ...params: Op[]) {
     this.ad = ad
     this.id = ad.getNextID()
     this.dependsOn = params
@@ -98,7 +98,7 @@ export abstract class OpLiteral extends Op {
 export class Value extends OpLiteral {
   private val: number
 
-  constructor(ad: AutoDiff, val: number) {
+  constructor(ad: ADBase, val: number) {
     super(ad)
     this.val = val
   }
@@ -111,7 +111,7 @@ export class Value extends OpLiteral {
 export class Param extends OpLiteral {
   public name: string
 
-  constructor(ad: AutoDiff, name: string) {
+  constructor(ad: ADBase, name: string) {
     super(ad)
     this.name = name
     this.ad.registerParam(this, name)

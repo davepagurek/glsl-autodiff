@@ -1,4 +1,4 @@
-import { Op, OpLiteral, AutoDiff as ADBase, Param, Input, ADConstructor } from './base'
+import { Op, OpLiteral, ADBase, Param, Input, ADConstructor } from './base'
 
 export interface VecOp extends Op {
   x(): Op

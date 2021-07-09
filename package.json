@@ -1,10 +1,10 @@
 {
   "name": "@davepagurek/glsl-autodiff",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "main": "src/index.ts",
   "author": "Dave Pagurek <dave@davepagurek.com>",
   "license": "MIT",
-  "types": "build/index.d.ts",
+  "types": "build/autodiff.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/davepagurek/glsl-autodiff.git"
@@ -20,13 +20,15 @@
     "@types/node": "^15.12.5",
     "gh-pages": "^3.2.3",
     "ts-loader": "^9.2.3",
+    "ts-node": "^10.0.0",
     "typescript": "^4.3.4",
     "webpack": "^5.41.1",
     "webpack-cli": "^4.7.2"
   },
   "scripts": {
-    "build": "yarn generate:js",
+    "build": "yarn generate:js && yarn generate:types",
     "generate:js": "yarn run webpack",
+    "generate:types": "yarn run ts-node scripts/combine-types.ts",
     "deploy": "yarn build && yarn run gh-pages -d .",
     "publish": "npm publish --access public"
   },
