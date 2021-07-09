@@ -1,6 +1,6 @@
 {
   "name": "@davepagurek/glsl-autodiff",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "src/index.ts",
   "author": "Dave Pagurek <dave@davepagurek.com>",
   "license": "MIT",
@@ -28,5 +28,8 @@
     "build": "yarn generate:js",
     "generate:js": "yarn run webpack",
     "deploy": "yarn build && yarn run gh-pages -d ."
-  }
+  },
+  "files": [
+    "build"
+  ]
 }
