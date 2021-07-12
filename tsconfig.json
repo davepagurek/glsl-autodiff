@@ -16,7 +16,8 @@
     "target": "es6",
     "sourceMap": true,
     "strictNullChecks": true,
-    "downlevelIteration": true
+    "downlevelIteration": true,
+    "declaration": true
   },
   "include": ["./src"],
   "exclude": [

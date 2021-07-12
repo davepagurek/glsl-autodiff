@@ -1,4 +1,4 @@
-import { Input, Op, Param, AutoDiff as ADBase, ADConstructor } from './base'
+import { Input, Op, Param, ADBase, ADConstructor } from './base'
 import { VectorOp, WithVecDependencies } from './vecBase'
 
 export class VecMix extends WithVecDependencies {

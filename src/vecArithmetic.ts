@@ -1,4 +1,4 @@
-import { Input, Param, AutoDiff as ADBase, ADConstructor } from './base'
+import { Input, Param, ADBase, ADConstructor } from './base'
 import { VectorOp, WithVecDependencies } from './vecBase'
 
 export class VecNeg extends WithVecDependencies {
@@ -24,8 +24,8 @@ export class VecScale extends WithVecDependencies {
     return this.dependsOn.map((op) => op.ref()).join('*')
   }
   derivative(param: Param) {
-    // Multiplying two vectors in glsl does elementwise multiplication
-    return this.dependsOn.map((op) => op.derivRef(param)).join('*')
+    const [f, g] = this.dependsOn
+    return `${f.ref()}*${g.derivRef(param)}+${g.ref()}*${f.derivRef(param)}`
   }
 }
 
@@ -35,6 +35,7 @@ export class VecMult extends WithVecDependencies {
   }
   derivative(param: Param) {
     const [f, g] = this.dependsOn
+    // Multiplying two vectors in glsl does elementwise multiplication
     return `${f.ref()}*${g.derivRef(param)}+${g.ref()}*${f.derivRef(param)}`
   }
 }
@@ -51,7 +52,7 @@ VectorOp.prototype.neg = function() {
   return new VecNeg(this.ad, this)
 }
 VectorOp.prototype.add = function(...params: VectorOp[]) {
-  return new VecSum(this.ad, ...params)
+  return new VecSum(this.ad, this, ...params)
 }
 VectorOp.prototype.scale = function(k: Input) {
   return new VecScale(this.ad, this, this.ad.convertVal(k))

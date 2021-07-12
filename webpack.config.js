@@ -1,22 +1,32 @@
 const path = require('path');
 
-module.exports = {
-  context: path.resolve(__dirname, 'src'),
-  devtool: 'inline-source-map',
-  entry: './index.ts',
-  mode: 'development',
-  module: {
-    rules: [{
-      test: /\.tsx?$/,
-      use: 'ts-loader',
-      exclude: /node_modules/
-    }]
-  },
-  output: {
-    filename: 'autodiff.js',
-    path: path.resolve(__dirname, 'build')
-  },
-  resolve: {
-    extensions: ['.tsx', '.ts', '.jsx', '.js']
-  },
+module.exports = (env, argv) => {
+  const mode = argv.mode ?? 'production'
+  const config = {
+    context: path.resolve(__dirname, 'src'),
+    entry: './index.ts',
+    mode,
+    module: {
+      rules: [{
+        test: /\.tsx?$/,
+        use: 'ts-loader',
+        exclude: /node_modules/
+      }]
+    },
+    output: {
+      filename: 'autodiff.js',
+      path: path.resolve(__dirname, 'build'),
+      libraryTarget: 'umd',
+      library: 'AutoDiff',
+    },
+    resolve: {
+      extensions: ['.tsx', '.ts', '.jsx', '.js']
+    },
+  }
+
+  if (mode === 'development') {
+    config.devtool = 'inline-source-map'
+  }
+
+  return config
 };
