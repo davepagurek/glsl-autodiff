@@ -1,6 +1,6 @@
 # glsl-autodiff
 
-Live demo: https://davepagurek.github.io/glsl-autodiff/test/advanced_plane/
+Live demo: https://davepagurek.github.io/glsl-autodiff/test/sinenoise_plane/
 
 ## Why?
 Sometimes I want to dynamically distort meshes in shaders. If I want to preserve shading, this means I need to figure out the change to the surface normals in addition to the vertex displacement. If we have two different tangents vectors on the surface at a point, the normal is `normalize(cross(tan1, tan2))`. So far so good! Now how do we get those tangents?
