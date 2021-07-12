@@ -46,11 +46,12 @@ export class VecParamElementRef extends OpLiteral {
 export function Cache(target: Object, propertyKey: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value
   let created = false
-  let cached: any = undefined
+  const cache = new Map<any, any>()
   descriptor.value = function(...args: any[]) {
-    if (!created) {
+    let cached = cache.get(this)
+    if (!cached) {
       cached = originalMethod.apply(this, ...args)
-      created = true
+      cache.set(this, cached)
     }
     return cached
   }
@@ -61,6 +62,22 @@ export abstract class VectorOp extends Op {
   scalar() { return false }
 
   abstract size(): number
+
+  public override initializer(): string {
+    if (this.useTempVar()) {
+      return `vec${this.size()} ${this.ref()}=${this.definition()};\n`
+    } else {
+      return ''
+    }
+  }
+
+  public override derivInitializer(param: Param): string {
+    if (this.useTempVar()) {
+      return `vec${this.size()} ${this.derivRef(param)}=${this.derivative(param)};\n`
+    } else {
+      return ''
+    }
+  }
 
   @Cache
   public x(): Op { return new VecElementRef(this.ad, 'x', this) }
@@ -228,29 +245,13 @@ export abstract class WithVecDependencies extends VectorOp {
   }
 
   public size() {
-    return Math.min(...this.vecDependsOn.map((v) => v.size()))
+    return this.vecDependsOn[0].size()
   }
 }
 
 export class Vec extends VectorOp {
   public size(): number {
     return this.dependsOn.length
-  }
-
-  public override initializer(): string {
-    if (this.useTempVar()) {
-      return `vec${this.size()} ${this.ref()}=${this.definition()};\n`
-    } else {
-      return ''
-    }
-  }
-
-  public override derivInitializer(param: Param): string {
-    if (this.useTempVar()) {
-      return `vec${this.size()} ${this.derivRef(param)}=${this.derivative(param)};\n`
-    } else {
-      return ''
-    }
   }
 
   definition() {

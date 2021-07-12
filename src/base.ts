@@ -13,11 +13,44 @@ export interface ADBase {
 
 export type ADConstructor = new (...args: any[]) => ADBase
 
+// https://stackoverflow.com/a/27074218
+export const lineNumber = () => {
+  const e = new Error()
+  console.log(e.stack)
+  if (!e.stack) try {
+    // IE requires the Error to actually be throw or else the Error's 'stack'
+    // property is undefined.
+    throw e
+  } catch (e) {
+    if (!e.stack) {
+      return '0' // IE < 10, likely
+    }
+  }
+  const stack = e.stack?.toString().split(/\r\n|\n/)
+  // We want our caller's frame. It's index into |stack| depends on the
+  // browser and browser version, so we need to search for the second frame:
+  const frameRE = /:(\d+):(?:\d+)[^\d]*$/
+  let frame
+  do {
+    frame = stack?.shift();
+  } while (!frameRE.exec(frame) && stack?.length);
+  return (frameRE.exec(stack?.shift() ?? '') ?? [])[1] ?? ''
+}
+
+export function RecordLine<T extends (...args: any[]) => Op>(fn: T): T {
+  return function(...args: any[]) {
+    const op = fn.apply(this, args)
+    op.srcLine = lineNumber()
+    return op
+  } as T
+}
+
 export abstract class Op {
   protected ad: ADBase
   public id: number
   public dependsOn: Op[]
   public usedIn: Op[] = []
+  public srcLine: string = ''
 
   constructor(ad: ADBase, ...params: Op[]) {
     this.ad = ad
@@ -31,7 +64,8 @@ export abstract class Op {
   public scalar() { return true }
 
   public useTempVar() {
-    return this.usedIn.length > 1
+    return true
+    //return this.usedIn.length > 1
   }
 
   public ref(): string {
@@ -104,7 +138,10 @@ export class Value extends OpLiteral {
   }
 
   isConst() { return true }
-  definition() { return `${this.val.toFixed(4)}` }
+  definition() { 
+    const str = `${this.val.toFixed(4)}`
+    return this.val < 0 ? `(${str})` : str
+  }
   derivative() { return '0.0' }
 }
 
