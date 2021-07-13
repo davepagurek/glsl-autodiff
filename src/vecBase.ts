@@ -249,6 +249,16 @@ export abstract class WithVecDependencies extends VectorOp {
   }
 }
 
+export abstract class ScalarWithVecDependencies extends Op {
+  public get vecDependsOn() {
+    return this.dependsOn as VecOp[]
+  }
+
+  public size() {
+    return this.vecDependsOn[0].size()
+  }
+}
+
 export class Vec extends VectorOp {
   public size(): number {
     return this.dependsOn.length

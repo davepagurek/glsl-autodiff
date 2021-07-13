@@ -1,5 +1,5 @@
 import { Input, Op, Param, ADBase, ADConstructor } from './base'
-import { VectorOp, WithVecDependencies } from './vecBase'
+import { VectorOp, WithVecDependencies, ScalarWithVecDependencies } from './vecBase'
 
 export class VecMix extends WithVecDependencies {
   definition() {
@@ -81,8 +81,7 @@ export class VecIfElse extends WithVecDependencies {
   }
 }
 
-export class Dot extends WithVecDependencies {
-  override scalar() { return true }
+export class Dot extends ScalarWithVecDependencies {
   definition() {
     return `dot(${this.dependsOn.map((v) => v.ref()).join(',')})`
   }
@@ -96,7 +95,7 @@ export class Dot extends WithVecDependencies {
   }
 }
 
-export class Length extends WithVecDependencies {
+export class Length extends ScalarWithVecDependencies {
   override scalar() { return true }
   definition() { return `length(${this.dependsOn[0].ref()})` }
   derivative(param: Param) {
@@ -110,8 +109,7 @@ export class Length extends WithVecDependencies {
   }
 }
 
-export class Dist extends WithVecDependencies {
-  override scalar() { return true }
+export class Dist extends ScalarWithVecDependencies {
   definition() { return `distance(${this.dependsOn.map((v) => v.ref()).join(',')})` }
   derivative(param: Param) {
     const outerDeriv = `0.5/distance(${this.dependsOn.map((v) => v.ref()).join(',')})`
