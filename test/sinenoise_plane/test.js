@@ -98,7 +98,7 @@ const vert = `
       pos.z = z;
       vec3 slopeX = vec3(1.0, 0.0, dzdx);
       vec3 slopeY = vec3(0.0, 1.0, dzdy);
-      vNormal = uNormalMatrix * -normalize(cross(slopeX, slopeY));
+      vNormal = uNormalMatrix * normalize(cross(slopeX, slopeY));
 
       gl_Position = uProjectionMatrix *
                     uModelViewMatrix *
@@ -134,17 +134,21 @@ void main() {
   vec3 color = vec3(0.0, 0.0, 0.0);
   for (int i = 0; i < MAX_LIGHTS; i++) {
     if (i >= numLights) break;
+    vec3 toLightNormal = normal;
     vec3 lightPosition = lightPositions[i];
     float distanceSquared = 0.0; /*0.00015*dot(
       lightPosition - vPosition,
       lightPosition - vPosition);*/
     vec3 lightDir = normalize(lightPosition - vPosition);
-    float lambertian = max(dot(lightDir, normal), 0.0);
+    if (dot(lightDir, toLightNormal) < 0.0) {
+      toLightNormal *= -1.0;
+    }
+    float lambertian = max(dot(lightDir, toLightNormal), 0.0);
     color += lambertian * materialColor * lightColors[i] *
       lightStrengths[i] / (1.0 + distanceSquared);
     vec3 viewDir = normalize(-vPosition);
     float spec = pow(
-      max(dot(viewDir, reflect(-lightDir, normal)), 0.0),
+      max(dot(viewDir, reflect(-lightDir, toLightNormal)), 0.0),
       materialShininess);
     color += spec * lightStrengths[i] * lightColors[i] /
       (1.0 + distanceSquared);

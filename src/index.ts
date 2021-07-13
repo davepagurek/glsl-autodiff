@@ -73,7 +73,7 @@ class AutoDiffImpl implements ADBase {
 
     // Add outputs
     for (const name in this.outputs) {
-      code += `float ${name}=${this.outputs[name].ref()};\n`
+      code += `${this.outputs[name].glslType()} ${name}=${this.outputs[name].ref()};\n`
     }
 
     for (const param in this.derivOutputs) {
@@ -93,7 +93,7 @@ class AutoDiffImpl implements ADBase {
 
       // Add derivative outputs
       for (const name in this.derivOutputs[param]) {
-        code += `float ${name}=${this.derivOutputs[param][name].derivRef(paramOp)};\n`
+        code += `${this.derivOutputs[param][name].glslType()} ${name}=${this.derivOutputs[param][name].derivRef(paramOp)};\n`
       }
     }
 

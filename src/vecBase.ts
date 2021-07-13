@@ -63,22 +63,6 @@ export abstract class VectorOp extends Op {
 
   abstract size(): number
 
-  public override initializer(): string {
-    if (this.useTempVar()) {
-      return `vec${this.size()} ${this.ref()}=${this.definition()};\n`
-    } else {
-      return ''
-    }
-  }
-
-  public override derivInitializer(param: Param): string {
-    if (this.useTempVar()) {
-      return `vec${this.size()} ${this.derivRef(param)}=${this.derivative(param)};\n`
-    } else {
-      return ''
-    }
-  }
-
   @Cache
   public x(): Op { return new VecElementRef(this.ad, 'x', this) }
 

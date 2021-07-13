@@ -63,9 +63,18 @@ export abstract class Op {
 
   public scalar() { return true }
 
+  public size() { return 1 }
+
+  public glslType() {
+    if (this.scalar()) {
+      return 'float'
+    } else {
+      return `vec${this.size()}`
+    }
+  }
+
   public useTempVar() {
-    return true
-    //return this.usedIn.length > 1
+    return this.usedIn.length > 1
   }
 
   public ref(): string {
@@ -86,7 +95,7 @@ export abstract class Op {
 
   public initializer(): string {
     if (this.useTempVar()) {
-      return `float ${this.ref()}=${this.definition()};\n`
+      return `${this.glslType()} ${this.ref()}=${this.definition()};\n`
     } else {
       return ''
     }
@@ -94,7 +103,7 @@ export abstract class Op {
 
   public derivInitializer(param: Param): string {
     if (this.useTempVar()) {
-      return `float ${this.derivRef(param)}=${this.derivative(param)};\n`
+      return `${this.glslType()} ${this.derivRef(param)}=${this.derivative(param)};\n`
     } else {
       return ''
     }
