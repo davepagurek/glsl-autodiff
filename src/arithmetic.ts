@@ -1,4 +1,4 @@
-import { Input, Op, Param, ADBase, ADConstructor } from './base'
+import { Input, Op, Param, ADBase, ADConstructor, UserInput } from './base'
 
 export class Neg extends Op {
   definition() {
@@ -79,20 +79,20 @@ declare module './base' {
   }
 }
 
-Op.prototype.neg = function() {
+Op.prototype.neg = UserInput(function() {
   return new Neg(this.ad, this)
-}
-Op.prototype.add = function(...params: Input[]) {
+})
+Op.prototype.add = UserInput(function(...params: Input[]) {
   if (params.length === 0) {
     throw new Error(`add() called with too few arguments: ${params}`)
   } else {
     return new Sum(this.ad, this, ...this.ad.convertVals(params))
   }
-}
-Op.prototype.sub = function(val: Input) {
+})
+Op.prototype.sub = UserInput(function(val: Input) {
   return this.add(this.ad.convertVal(val).neg())
-}
-Op.prototype.mult = function(...params: Input[]) {
+})
+Op.prototype.mult = UserInput(function(...params: Input[]) {
   if (params.length === 0) {
     throw new Error(`mult() called with too few arguments: ${params}`)
   } else if (params.length === 1) {
@@ -100,18 +100,18 @@ Op.prototype.mult = function(...params: Input[]) {
   } else {
     return this.mult(params[0]).mult(...params.slice(1))
   }
-}
-Op.prototype.div = function(param: Input) {
+})
+Op.prototype.div = UserInput(function(param: Input) {
   return new Div(this.ad, this, this.ad.convertVal(param))
-}
-Op.prototype.pow = function(param: Input) {
+})
+Op.prototype.pow = UserInput(function(param: Input) {
   return new Pow(this.ad, this, this.ad.convertVal(param))
-}
-Op.prototype.sqrt = function() { return this.pow(0.5) }
+})
+Op.prototype.sqrt = UserInput(function() { return this.pow(0.5) })
 
 export function WithArithmetic<T extends ADConstructor>(Base: T) {
   class AutoDiff extends Base {
-    sum(...params: Input[]) {
+    sum = UserInput(function(...params: Input[]) {
       if (params.length === 0) {
         throw new Error(`sum() called with too few arguments: ${params}`)
       } else {
@@ -122,8 +122,8 @@ export function WithArithmetic<T extends ADConstructor>(Base: T) {
           return first
         }
       }
-    }
-    prod(...params: Input[]) {
+    })
+    prod = UserInput(function(...params: Input[]) {
       if (params.length === 0) {
         throw new Error(`prod() called with too few arguments: ${params}`)
       } else {
@@ -134,10 +134,10 @@ export function WithArithmetic<T extends ADConstructor>(Base: T) {
           return first
         }
       }
-    }
-    sqrt(param: Input) {
+    })
+    sqrt = UserInput(function(param: Input) {
       return this.convertVal(param).sqrt()
-    }
+    })
   }
   return AutoDiff
 }

@@ -1,4 +1,4 @@
-import { Input, Op, Param, ADBase, ADConstructor } from './base'
+import { Input, Op, Param, ADBase, ADConstructor, UserInput } from './base'
 import { VectorOp, WithVecDependencies, ScalarWithVecDependencies } from './vecBase'
 
 export class VecMix extends WithVecDependencies {
@@ -143,68 +143,68 @@ declare module './base' {
   }
 }
 
-VectorOp.prototype.mix = function(other: VectorOp, amt: Input) {
+VectorOp.prototype.mix = UserInput(function(other: VectorOp, amt: Input) {
   return new VecMix(this.ad, this, other, this.ad.convertVal(amt))
-}
-VectorOp.prototype.clamp = function(min: VectorOp, max: VectorOp) {
+})
+VectorOp.prototype.clamp = UserInput(function(min: VectorOp, max: VectorOp) {
   return new VecClamp(this.ad, this, min, max)
-}
-VectorOp.prototype.min = function(...params: VectorOp[]) {
+})
+VectorOp.prototype.min = UserInput(function(...params: VectorOp[]) {
   return params.reduce(
     (acc, next) => new VecMin(this.ad, acc, next),
     this,
   )
-}
-VectorOp.prototype.max = function(...params: VectorOp[]) {
+})
+VectorOp.prototype.max = UserInput(function(...params: VectorOp[]) {
   return params.reduce(
     (acc, next) => new VecMax(this.ad, acc, next),
     this,
   )
-}
-VectorOp.prototype.dot = function(other: VectorOp) {
+})
+VectorOp.prototype.dot = UserInput(function(other: VectorOp) {
   return new Dot(this.ad, this, other)
-}
-VectorOp.prototype.length = function() {
+})
+VectorOp.prototype.length = UserInput(function() {
   return new Length(this.ad, this)
-}
-VectorOp.prototype.dist = function(other: VectorOp) {
+})
+VectorOp.prototype.dist = UserInput(function(other: VectorOp) {
   return new Dist(this.ad, this, other)
-}
-Op.prototype.vecIfElse = function(thenOp: VectorOp, elseOp: VectorOp) {
+})
+Op.prototype.vecIfElse = UserInput(function(thenOp: VectorOp, elseOp: VectorOp) {
   return new VecIfElse(this.ad, this, thenOp, elseOp)
-}
+})
 
 export function WithVecFunctions<T extends ADConstructor>(Base: T) {
   class AutoDiff extends Base {
-    vecMix(a: VectorOp, b: VectorOp, amt: Input) {
+    vecMix = UserInput(function(a: VectorOp, b: VectorOp, amt: Input) {
       return a.mix(b, amt)
-    }
-    vecClamp(val: VectorOp, min: VectorOp, max: VectorOp) {
+    })
+    vecClamp = UserInput(function(val: VectorOp, min: VectorOp, max: VectorOp) {
       return val.clamp(min, max)
-    }
-    vecMin(...params: VectorOp[]) {
+    })
+    vecMin = UserInput(function(...params: VectorOp[]) {
       if (params.length === 0) {
         throw new Error(`No arguments passed to vecMin()!`)
       } else {
         return params.reduce((acc, next) => acc.min(next))
       }
-    }
-    vecMax(...params: VectorOp[]) {
+    })
+    vecMax = UserInput(function(...params: VectorOp[]) {
       if (params.length === 0) {
         throw new Error(`No arguments passed to vecMax()!`)
       } else {
         return params.reduce((acc, next) => acc.max(next))
       }
-    }
-    dot(a: VectorOp, b: VectorOp) {
+    })
+    dot = UserInput(function(a: VectorOp, b: VectorOp) {
       return a.dot(b)
-    }
-    length(val: VectorOp) {
+    })
+    length = UserInput(function(val: VectorOp) {
       return val.length()
-    }
-    dist(a: VectorOp, b: VectorOp) {
+    })
+    dist = UserInput(function(a: VectorOp, b: VectorOp) {
       return a.dist(b)
-    }
+    })
   }
   return AutoDiff
 }

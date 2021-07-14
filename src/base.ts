@@ -14,7 +14,7 @@ export interface ADBase {
 export type ADConstructor = new (...args: any[]) => ADBase
 
 // https://stackoverflow.com/a/27074218
-export const lineNumber = () => {
+export const getStack = () => {
   const e = new Error()
   console.log(e.stack)
   if (!e.stack) try {
@@ -23,24 +23,21 @@ export const lineNumber = () => {
     throw e
   } catch (e) {
     if (!e.stack) {
-      return '0' // IE < 10, likely
+      return [] // IE < 10, likely
     }
   }
-  const stack = e.stack?.toString().split(/\r\n|\n/)
-  // We want our caller's frame. It's index into |stack| depends on the
-  // browser and browser version, so we need to search for the second frame:
   const frameRE = /:(\d+):(?:\d+)[^\d]*$/
-  let frame
-  do {
-    frame = stack?.shift();
-  } while (!frameRE.exec(frame) && stack?.length);
-  return (frameRE.exec(stack?.shift() ?? '') ?? [])[1] ?? ''
+  const stack = e.stack?.toString().split(/\r\n|\n/).filter((line) => line.match(frameRE)) ?? []
+  return stack
 }
 
-export function RecordLine<T extends (...args: any[]) => Op>(fn: T): T {
+// If we know a function will be called directly by the user, wrap it with
+// this so we can add extra debug info
+export function UserInput<T extends (...args: any[]) => Op>(fn: T): T {
   return function(...args: any[]) {
     const op = fn.apply(this, args)
-    op.srcLine = lineNumber()
+    const stack = getStack()
+    op.srcLine = stack[2] ?? ''
     return op
   } as T
 }
@@ -74,7 +71,8 @@ export abstract class Op {
   }
 
   public useTempVar() {
-    return this.usedIn.length > 1
+    return true
+    //return this.usedIn.length > 1
   }
 
   public ref(): string {
@@ -95,7 +93,7 @@ export abstract class Op {
 
   public initializer(): string {
     if (this.useTempVar()) {
-      return `${this.glslType()} ${this.ref()}=${this.definition()};\n`
+      return `${this.glslType()} ${this.ref()}=${this.definition()}; // ${this.srcLine}\n`
     } else {
       return ''
     }
