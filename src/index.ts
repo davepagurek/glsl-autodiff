@@ -1,4 +1,4 @@
-import { Input, Param, Op, Value, ADBase, UserInput } from './base'
+import { ADSettings, Input, Param, Op, Value, ADBase, UserInput } from './base'
 import { WithArithmetic } from './arithmetic'
 import { WithFunctions } from './functions'
 import { WithVecBase } from './vecBase'
@@ -11,6 +11,11 @@ class AutoDiffImpl implements ADBase {
     const id = this.nextID
     this.nextID++
     return id
+  }
+
+  public settings: ADSettings = {
+    maxDepthPerVariable: 8,
+    debug: false,
   }
 
   protected params: { [key: string]: Param } = {}
@@ -106,8 +111,11 @@ const ExtendedAD = WithVecFunctions(WithVecArithmetic(WithVecBase(WithFunctions(
 type GetType<T> = T extends new (...args: any[]) => infer V ? V : never
 type AD = GetType<typeof ExtendedAD>
 
-export const gen = (cb: (ad: AD) => void): string => {
+export const gen = (cb: (ad: AD) => void, settings: Partial<ADSettings> = {}): string => {
   const ad = new ExtendedAD()
+  for (const setting in settings) {
+    ad.settings[setting] = settings[setting]
+  }
   cb(ad)
   return ad.gen()
 }

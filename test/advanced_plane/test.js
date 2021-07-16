@@ -104,63 +104,12 @@ void main(void) {
 }
 `
 
-const makePlane = (detail) => {
-  return new p5.Geometry(detail, detail, function() {
-    this.gid = `subdivPlane|${detail}`
-
-    const [uVec, vVec] = [createVector(1, 0, 0), createVector(0, 1, 0)]
-    const normal = uVec.cross(vVec)
-
-    // This will be the index of the first vertex
-    // of this face
-    const vertexOffset = this.vertices.length
-
-    for (let i = 0; i < detail; i++) {
-      for (let j = 0; j < detail; j++) {
-        const u = i / (detail - 1)
-        const v = j / (detail - 1)
-        this.vertices.push(
-          createVector(0, 0, 0)
-          .add(uVec.copy().mult(u - 0.5))
-          .add(vVec.copy().mult(v - 0.5))
-        )
-        this.uvs.push([u, v])
-        this.vertexNormals.push(normal)
-      }
-    }
-
-    for (let i = 1; i < detail; i++) {
-      for (let j = 1; j < detail; j++) {
-        // +--+
-        //  \ |
-        //    +
-        this.faces.push([
-          vertexOffset + (j - 1) * detail + i - 1,
-          vertexOffset + (j - 1) * detail + i,
-          vertexOffset + j * detail + i,
-        ])
-
-        // +
-        // | \
-        // +--+
-        this.faces.push([
-          vertexOffset + j * detail + i,
-          vertexOffset + j * detail + i - 1,
-          vertexOffset + (j - 1) * detail + i - 1,
-        ])
-      }
-    }
-  })
-}
-
 let distortShader
 let texture
-let subdivPlane
 function setup() {
   createCanvas(800, 600, WEBGL)
   distortShader = createShader(vert, frag)
   texture = createGraphics(500, 500)
-  subdivPlane = makePlane(40)
 }
 
 const lights = [{
@@ -202,6 +151,6 @@ function draw() {
   push()
   const r = 200
   scale(r)
-  model(subdivPlane)
+  plane(1, 1, 40, 40)
   pop()
 }
