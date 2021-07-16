@@ -1,4 +1,4 @@
-import { Input, Op, Param, ADBase, ADConstructor } from './base'
+import { Input, Op, Param, ADBase, ADConstructor, UserInput } from './base'
 
 export class Sin extends Op {
   definition() {
@@ -84,56 +84,56 @@ declare module './base' {
   }
 }
 
-Op.prototype.sin = function() {
+Op.prototype.sin = UserInput(function() {
   return new Sin(this.ad, this)
-}
-Op.prototype.cos = function() {
+})
+Op.prototype.cos = UserInput(function() {
   return new Cos(this.ad, this)
-}
-Op.prototype.tan = function() {
+})
+Op.prototype.tan = UserInput(function() {
   // TODO make this its own class to optimize it
   return this.sin().div(this.cos())
-}
-Op.prototype.mix = function(b: Input, amt: Input) {
+})
+Op.prototype.mix = UserInput(function(b: Input, amt: Input) {
   return new Mix(this.ad, this, this.ad.convertVal(b), this.ad.convertVal(amt))
-}
-Op.prototype.clamp = function(min: Input, max: Input) {
+})
+Op.prototype.clamp = UserInput(function(min: Input, max: Input) {
   return new Clamp(this.ad, this, this.ad.convertVal(min), this.ad.convertVal(max))
-}
-Op.prototype.min = function(...params: Input[]) {
+})
+Op.prototype.min = UserInput(function(...params: Input[]) {
   return params.reduce(
     (acc, next) => new Min(this.ad, acc, this.ad.convertVal(next)),
     this,
   )
-}
-Op.prototype.max = function(...params: Input[]) {
+})
+Op.prototype.max = UserInput(function(...params: Input[]) {
   return params.reduce(
     (acc, next) => new Max(this.ad, acc, this.ad.convertVal(next)),
     this,
   )
-}
-Op.prototype.ifElse = function(thenOp: Input, elseOp: Input) {
+})
+Op.prototype.ifElse = UserInput(function(thenOp: Input, elseOp: Input) {
   return new IfElse(this.ad, this, this.ad.convertVal(thenOp), this.ad.convertVal(elseOp))
-}
+})
 
 export function WithFunctions<T extends ADConstructor>(Base: T) {
   class AutoDiff extends Base {
-    sin(input: Input) {
+    sin = UserInput(function(input: Input) {
       return this.convertVal(input).sin()
-    }
-    cos(input: Input) {
+    })
+    cos = UserInput(function(input: Input) {
       return this.convertVal(input).cos()
-    }
-    tan(input: Input) {
+    })
+    tan = UserInput(function(input: Input) {
       return this.convertVal(input).tan()
-    }
-    mix(a: Input, b: Input, amt: Input) {
+    })
+    mix = UserInput(function(a: Input, b: Input, amt: Input) {
       return this.convertVal(a).mix(b, amt)
-    }
-    clamp(val: Input, min: Input, max: Input) {
+    })
+    clamp = UserInput(function(val: Input, min: Input, max: Input) {
       return this.convertVal(val).clamp(min, max)
-    }
-    min(...params: Input[]) {
+    })
+    min = UserInput(function(...params: Input[]) {
       if (params.length === 0) {
         throw new Error(`No arguments passed to min()!`)
       } else {
@@ -144,8 +144,8 @@ export function WithFunctions<T extends ADConstructor>(Base: T) {
           return first
         }
       }
-    }
-    max(...params: Input[]) {
+    })
+    max = UserInput(function(...params: Input[]) {
       if (params.length === 0) {
         throw new Error(`No arguments passed to min()!`)
       } else {
@@ -156,10 +156,10 @@ export function WithFunctions<T extends ADConstructor>(Base: T) {
           return first
         }
       }
-    }
-    ifElse(ifOp: Input, thenOp: Input, elseOp: Input) {
+    })
+    ifElse = UserInput(function(ifOp: Input, thenOp: Input, elseOp: Input) {
       return this.convertVal(ifOp).ifElse(thenOp, elseOp)
-    }
+    })
   }
   return AutoDiff
 }

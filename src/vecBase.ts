@@ -1,4 +1,4 @@
-import { Op, OpLiteral, ADBase, Param, Input, ADConstructor } from './base'
+import { Op, OpLiteral, ADBase, Param, Input, ADConstructor, UserInput } from './base'
 
 export interface VecOp extends Op {
   x(): Op
@@ -309,24 +309,24 @@ export class VecParam extends VectorOp {
 
 export function WithVecBase<T extends ADConstructor>(Base: T) {
   class AutoDiff extends Base {
-    vec2Param(name: string) {
+    vec2Param = UserInput(function(name: string) {
       return new VecParam(this, name, 2)
-    }
-    vec3Param(name: string) {
+    })
+    vec3Param = UserInput(function(name: string) {
       return new VecParam(this, name, 3)
-    }
-    vec4Param(name: string) {
+    })
+    vec4Param = UserInput(function(name: string) {
       return new VecParam(this, name, 4)
-    }
-    vec2(x: Input, y: Input) {
+    })
+    vec2 = UserInput(function(x: Input, y: Input) {
       return new Vec(this, this.convertVal(x), this.convertVal(y))
-    }
-    vec3(x: Input, y: Input, z: Input) {
+    })
+    vec3 = UserInput(function(x: Input, y: Input, z: Input) {
       return new Vec(this, ...this.convertVals([x, y, z]))
-    }
-    vec4(x: Input, y: Input, z: Input, w: Input) {
+    })
+    vec4 = UserInput(function(x: Input, y: Input, z: Input, w: Input) {
       return new Vec(this, ...this.convertVals([x, y, z, w]))
-    }
+    })
   }
   return AutoDiff
 }

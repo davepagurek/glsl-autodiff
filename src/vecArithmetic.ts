@@ -1,4 +1,4 @@
-import { Input, Param, ADBase, ADConstructor } from './base'
+import { Input, Param, ADBase, ADConstructor, UserInput } from './base'
 import { VectorOp, WithVecDependencies } from './vecBase'
 
 export class VecNeg extends WithVecDependencies {
@@ -48,16 +48,16 @@ declare module './vecBase' {
     mult(...params: VectorOp[]): VectorOp
   }
 }
-VectorOp.prototype.neg = function() {
+VectorOp.prototype.neg = UserInput(function() {
   return new VecNeg(this.ad, this)
-}
-VectorOp.prototype.add = function(...params: VectorOp[]) {
+})
+VectorOp.prototype.add = UserInput(function(...params: VectorOp[]) {
   return new VecSum(this.ad, this, ...params)
-}
-VectorOp.prototype.scale = function(k: Input) {
+})
+VectorOp.prototype.scale = UserInput(function(k: Input) {
   return new VecScale(this.ad, this, this.ad.convertVal(k))
-}
-VectorOp.prototype.mult = function(...params: VectorOp[]) {
+})
+VectorOp.prototype.mult = UserInput(function(...params: VectorOp[]) {
   if (params.length === 0) {
     throw new Error(`mult() called with too few arguments: ${params}`)
   } else if (params.length === 1) {
@@ -65,11 +65,11 @@ VectorOp.prototype.mult = function(...params: VectorOp[]) {
   } else {
     return this.mult(params[0]).mult(...params.slice(1))
   }
-}
+})
 
 export function WithVecArithmetic<T extends ADConstructor>(Base: T) {
   class AutoDiff extends Base {
-    vecSum(...params: VectorOp[]) {
+    vecSum = UserInput(function(...params: VectorOp[]) {
       if (params.length === 0) {
         throw new Error('No arguments passed to vecSum()!')
       } else if (params.length === 1) {
@@ -77,10 +77,10 @@ export function WithVecArithmetic<T extends ADConstructor>(Base: T) {
       } else {
         return params[0].add(...params.slice(1))
       }
-    }
-    vecProd(...params: VectorOp[]) {
+    })
+    vecProd = UserInput(function(...params: VectorOp[]) {
       return params.reduce((acc, next) => acc.mult(next))
-    }
+    })
   }
   return AutoDiff
 }

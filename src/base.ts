@@ -9,44 +9,49 @@ export interface ADBase {
   convertVals(params: Input[]): Op[]
   output(name: string, op: Op): ADBase
   outputDeriv(name: string, param: Param | string, op: Op): ADBase
+  settings: ADSettings
+}
+
+export type ADSettings = {
+  maxDepthPerVariable: number
+  debug: boolean
 }
 
 export type ADConstructor = new (...args: any[]) => ADBase
 
 // https://stackoverflow.com/a/27074218
-export const lineNumber = () => {
+export const getStack = () => {
   const e = new Error()
-  console.log(e.stack)
   if (!e.stack) try {
     // IE requires the Error to actually be throw or else the Error's 'stack'
     // property is undefined.
     throw e
   } catch (e) {
     if (!e.stack) {
-      return '0' // IE < 10, likely
+      return [] // IE < 10, likely
     }
   }
-  const stack = e.stack?.toString().split(/\r\n|\n/)
-  // We want our caller's frame. It's index into |stack| depends on the
-  // browser and browser version, so we need to search for the second frame:
   const frameRE = /:(\d+):(?:\d+)[^\d]*$/
-  let frame
-  do {
-    frame = stack?.shift();
-  } while (!frameRE.exec(frame) && stack?.length);
-  return (frameRE.exec(stack?.shift() ?? '') ?? [])[1] ?? ''
+  const stack = e.stack?.toString().split(/\r\n|\n/).filter((line) => line.match(frameRE)) ?? []
+  return stack
 }
 
-export function RecordLine<T extends (...args: any[]) => Op>(fn: T): T {
+// If we know a function will be called directly by the user, wrap it with
+// this so we can add extra debug info
+export function UserInput<T extends (...args: any[]) => Op>(fn: T): T {
   return function(...args: any[]) {
     const op = fn.apply(this, args)
-    op.srcLine = lineNumber()
+
+    if (op.ad.settings.debug) {
+      const stack = getStack()
+      op.srcLine = stack[2] ?? ''
+    }
     return op
   } as T
 }
 
 export abstract class Op {
-  protected ad: ADBase
+  public ad: ADBase
   public id: number
   public dependsOn: Op[]
   public usedIn: Op[] = []
@@ -73,8 +78,22 @@ export abstract class Op {
     }
   }
 
+  public depth() {
+    // Force usage of a temp variable if used in multiple spots
+    if (this.usedIn.length > 1) return 1
+
+    const depDepth = Math.max(0, ...this.dependsOn.map((op) => op.depth()))
+    const depth = depDepth + 1
+
+    if (depth > this.ad.settings.maxDepthPerVariable) {
+      return 1
+    } else {
+      return depth
+    }
+  }
+
   public useTempVar() {
-    return this.usedIn.length > 1
+    return this.depth() === 1
   }
 
   public ref(): string {
@@ -95,7 +114,12 @@ export abstract class Op {
 
   public initializer(): string {
     if (this.useTempVar()) {
-      return `${this.glslType()} ${this.ref()}=${this.definition()};\n`
+      let line = `${this.glslType()} ${this.ref()}=${this.definition()};`
+      if (this.ad.settings.debug && this.srcLine) {
+        line = `\n// From ${this.srcLine}\n` + line
+      }
+      line += '\n'
+      return line
     } else {
       return ''
     }

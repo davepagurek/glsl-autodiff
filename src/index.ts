@@ -1,4 +1,4 @@
-import { Input, Param, Op, Value, ADBase } from './base'
+import { ADSettings, Input, Param, Op, Value, ADBase, UserInput } from './base'
 import { WithArithmetic } from './arithmetic'
 import { WithFunctions } from './functions'
 import { WithVecBase } from './vecBase'
@@ -13,17 +13,22 @@ class AutoDiffImpl implements ADBase {
     return id
   }
 
+  public settings: ADSettings = {
+    maxDepthPerVariable: 8,
+    debug: false,
+  }
+
   protected params: { [key: string]: Param } = {}
   protected outputs: { [key: string]: Op } = {}
   protected derivOutputs: { [param: string]: { [key: string]: Op } } = {}
 
-  public val(n: number) { return new Value(this, n) }
+  public val = UserInput(function(n: number) { return new Value(this, n) })
   public registerParam(param, name) {
     this.params[name] = param
   }
-  public param(name: string) {
+  public param = UserInput(function(name: string) {
     return new Param(this, name)
-  }
+  })
 
   public convertVal(param: Input): Op {
     if (param instanceof Op) {
@@ -106,8 +111,11 @@ const ExtendedAD = WithVecFunctions(WithVecArithmetic(WithVecBase(WithFunctions(
 type GetType<T> = T extends new (...args: any[]) => infer V ? V : never
 type AD = GetType<typeof ExtendedAD>
 
-export const gen = (cb: (ad: AD) => void): string => {
+export const gen = (cb: (ad: AD) => void, settings: Partial<ADSettings> = {}): string => {
   const ad = new ExtendedAD()
+  for (const setting in settings) {
+    ad.settings[setting] = settings[setting]
+  }
   cb(ad)
   return ad.gen()
 }
