@@ -255,24 +255,24 @@ void main(void) {
   float y = objSpacePosition.y;
   
   // From vert<@file:///Users/dpagurek/Documents/Projects/glsl-autodiff/test/sine_plane/test.js:31:12
-  float _glslad_v14=(((0.0000*0.5000)+(x*1.5000))+(y*2.8000))+(time*0.0020);
+  float _glslad_v14=(((0.0000\*0.5000)+(x\*1.5000))+(y\*2.8000))+(time\*0.0020);
 
   // From vert<@file:///Users/dpagurek/Documents/Projects/glsl-autodiff/test/sine_plane/test.js:30:23
   float _glslad_v16=0.0000+(sin(_glslad_v14));
 
   // From vert<@file:///Users/dpagurek/Documents/Projects/glsl-autodiff/test/sine_plane/test.js:31:12
-  float _glslad_v27=(((_glslad_v16*0.5000)+(x*1.5000))+(y*2.8000))+(time*0.0020);
+  float _glslad_v27=(((_glslad_v16\*0.5000)+(x\*1.5000))+(y\*2.8000))+(time\*0.0020);
 
   // From vert<@file:///Users/dpagurek/Documents/Projects/glsl-autodiff/test/sine_plane/test.js:30:23
   float _glslad_v29=_glslad_v16+(sin(_glslad_v27));
 
   // From vert<@file:///Users/dpagurek/Documents/Projects/glsl-autodiff/test/sine_plane/test.js:31:12
-  float _glslad_v40=(((_glslad_v29*0.5000)+(x*1.5000))+(y*2.8000))+(time*0.0020);
-  float z=((_glslad_v29+(sin(_glslad_v40)))*0.1000);
+  float _glslad_v40=(((_glslad_v29\*0.5000)+(x\*1.5000))+(y\*2.8000))+(time\*0.0020);
+  float z=((_glslad_v29+(sin(_glslad_v40)))\*0.1000);
 
   objSpacePosition.z += z;
-  vec4 worldSpacePosition = uModelViewMatrix * objSpacePosition;
-  gl_Position = uProjectionMatrix * worldSpacePosition;
+  vec4 worldSpacePosition = uModelViewMatrix \* objSpacePosition;
+  gl_Position = uProjectionMatrix \* worldSpacePosition;
 }</pre>
     </td>
   </tr>
