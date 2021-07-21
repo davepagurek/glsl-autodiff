@@ -1,6 +1,19 @@
 # glsl-autodiff
 Tired of doing math to get normals in your vertex shader? Same. Use this library to write your function once and generate derivatives automatically!
 
+- <a href="#demo">Demo</a>
+- <a href="#why">Why?</a>
+  - <a href="#eg-1d-plane-displacement">e.g. 1D Plane Displacement</a>
+  - <a href="#eg-1d-mesh-displacement">e.g. 1D Mesh Displacement</a>
+  - <a href="#eg-3d-mesh-displacement">e.g. 3D Mesh Displacement</a>
+- <a href="#api-usage">API Usage</a>
+  - <a href="#inputs-and-outputs">Inputs and Outputs</a>
+  - <a href="#operations">Operations</a>
+  - <a href="#additional-settings">Additional Settings</a>
+  - <a href="#importing-in-jsts-builds">Importing in JS/TS Builds</a>
+  - <a href="#importing-in-the-browser">Importing in the Browser</a>
+- <a href="#contributing">Contributing</a>
+
 ## Demo
 Some example distortion functions with autodiff used to make normals:
 - https://davepagurek.github.io/glsl-autodiff/test/sine_plane/
@@ -22,7 +35,155 @@ vec3 normal = normalize(
 
 Calculating these by hand involves doing a lot of derivatives and chain rules. I'm probably going to mess up my algebra somewhere and spend hours tracking down a minus sign I forgot. Instead, how about I calculate `z` using a domain specific language that can automatically compute `dz/dx` and `dz/dy`?
 
-## Usage
+### e.g. 1D Plane Displacement
+
+In the simplest case, our input mesh is only in 2D, and we displace it in only the third dimension (x and y are independent; z is dependent.) Because of this setup, we can directly compute surface tangents: given a unit vector pointing in a surface direction, we set its z component to be the offset derivative for that axis. The cross product of these tangents then gives us a normal.
+
+```typescript
+import { gen } from '@davepagurek/glsl-autodiff'
+const vert = `
+varying vec3 vVertPos;
+void main() {
+  vec3 position = vVertPos.xyz;
+  ${gen((ad) => {
+    // Generate z displacement based on x and y
+    const displace: (x: Op, y: Op) => Op = (x, y) => { /* Fill this in */ }
+    
+    const position = ad.vec3Param('position')
+    const offset = displace(position.x(), position.y())
+    offset.output('offset')
+    offset.outputDeriv('dodx', position.x())
+    offset.outputDeriv('dody', position.y())
+  })}
+  
+  // Use the offset
+  vec3 outPosition = position;
+  outPosition.z += offset;
+  
+  // The normal is the cross product of two surface tangents, which are
+  // the changes in z given a unit change in our two surface directions
+  vec3 slopeX = vec3(1., 0., dodx);
+  vec3 slopeY = vec3(0., 1., dodx);
+  vec3 normal = normalize(cross(slopeX, slopeY));
+  
+  // TODO do something with outPosition and normal
+}
+`
+```
+
+### e.g. 1D Mesh Displacement
+
+Even if we are still only distorting our mesh in the z axis, it complicates things if we have a mesh without constant normals of its own (meaning it isn't flat, e.g. a sphere).
+
+Like before, we generate a displacement in z based on x and y, and use the displacement derivatives to compute a normal. However, this normal is the normal for a displaced plane, not a sphere. Instead of using it directly, we calculate the *rotation* from an undisplaced plane to this new normal, and then apply that same rotation to the mesh's original normal.
+
+```typescript
+import { gen } from '@davepagurek/glsl-autodiff'
+const vert = `
+varying vec3 vVertPos;
+varying vec3 vVertNormal;
+
+// http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
+mat4 axisAngleRotation(vec3 axis, float angle) { /* ... */ }
+
+void main() {
+  vec3 position = vVertPos.xyz;
+  ${gen((ad) => {
+    // Generate z displacement based on x and y
+    const displace: (x: Op, y: Op) => Op = (x, y) => { /* Fill this in */ }
+    
+    const position = ad.vec3Param('position')
+    const offset = displace(position.x(), position.y())
+    offset.output('offset')
+    offset.outputDeriv('dodx', position.x())
+    offset.outputDeriv('dody', position.y())
+  })}
+  
+  // Use the offset
+  vec3 outPosition = position;
+  outPosition.z += offset;
+  
+  // Compute a normal like before, as if the mesh were a plane
+  vec3 slopeX = vec3(1., 0., dodx);
+  vec3 slopeY = vec3(0., 1., dodx);
+  vec3 displacedPlaneNormal = normalize(cross(slopeX, slopeY));
+  
+  // The un-displaced normal for our hypothetical plane. This should be
+  // the cross product of the two surface vectors.
+  vec3 originalPlaneNormal = vec3(0., 0., 1.);
+  
+  // Find the rotation induced by the displacement
+  float angle = acos(dot(noDisplacementNormal, originalPlaneNormal));
+  vec3 axis = normalize(cross(noDisplacementNormal, originalPlaneNormal));
+  mat4 rotation = axisAngleRotation(axis, -angle);
+
+  // Apply the rotation to the original normal
+  vec3 normal = (rotation * vec4(vVertNormal, 0.)).xyz;
+  
+  // TODO do something with outPosition and normal
+}
+`
+```
+
+### e.g. 3D Mesh Displacement
+
+Now what do we do if we want to full generalize our displacement, so that we can displace using a 3D vector based on the entire 3D position input? Rotating the original normal will still work, but we no longer have two obvious surface tangents to use to come up with a displacement normal.
+
+Our previous tangents were `vec3(1., 0., dodx)` ad `vec3(0., 1., dody)`. These can be re-expressed as a unit vector added to the offset induced by a change in that direction: `vec3(1., 0., 0.) + vec3(0., 0., dodx)` and `vec3(0., 1., 0.) + vec3(0., 0., dody)`. We can do the same thing now to come up with tangents, but where our induced change is a whole vector instead of just the z component! Our induced changes are no longer linearly independent from the input vectors, so this does place us in academically dubious territory, but in practice it seems to work decently.
+
+The other issue is that we have three tangents to worry about now, x, y, and z, but we need only two vectors to produce a normal. Instead of getting a normal from `cross(slopeX, slopeY)`, we can make one of our tangents span two axes, e.g. `cross(slopeX, slopeYZ)` where `slopeYZ = vec3(0., 1., 1.) + dody + dodz)`.
+
+```typescript
+import { gen } from '@davepagurek/glsl-autodiff'
+const vert = `
+varying vec3 vVertPos;
+varying vec3 vVertNormal;
+
+// http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
+mat4 axisAngleRotation(vec3 axis, float angle) { /* ... */ }
+
+void main() {
+  vec3 position = vVertPos.xyz;
+  ${gen((ad) => {
+    // Generate x,y,z displacement based on x,y,z input
+    const displace: (position: VectorOp) => VectorOp = (pos) => { /* Fill this in */ }
+    
+    const position = ad.vec3Param('position')
+    const offset = displace(position)
+    offset.output('offset')
+    offset.outputDeriv('dodx', position.x())
+    offset.outputDeriv('dody', position.y())
+    offset.outputDeriv('dodz', position.z())
+  })}
+  
+  // Use the offset
+  vec3 outPosition = position;
+  outPosition.z += offset;
+  
+  // Compute a normal with a surface tangent in X and a surface tangent in YZ to
+  // cover all three axes
+  vec3 slopeX = vec3(1., 0., 0.) + dodx;
+  vec3 slopeYZ = vec3(0., 1., 1.) + dody + dodz;
+  vec3 displacedPlaneNormal = normalize(cross(slopeX, slopeYZ));
+  
+  // The un-displaced normal for our hypothetical plane. This should be
+  // the cross product of the two surface vectors.
+  vec3 originalPlaneNormal = normalize(cross(vec3(1., 0., 0.), vec3(0., 1., 1.)));
+  
+  // Find the rotation induced by the displacement
+  float angle = acos(dot(noDisplacementNormal, originalPlaneNormal));
+  vec3 axis = normalize(cross(noDisplacementNormal, originalPlaneNormal));
+  mat4 rotation = axisAngleRotation(axis, -angle);
+
+  // Apply the rotation to the original normal
+  vec3 normal = (rotation * vec4(vVertNormal, 0.)).xyz;
+  
+  // TODO do something with outPosition and normal
+}
+`
+```
+
+## API Usage
 
 This exposes a `gen` function that generates GLSL that you can splice into your shader code. Inside a call to `gen()`, you provide a callback that takes in `ad`, the AutoDiff engine, and uses it to build shader code. We build shaders by essentially creating a graph of operations that we pass inputs through to arrive at an output. Every function call creates an object representing such an operation. Once we have a graph, we can automatically compute derivatives using it!
 
