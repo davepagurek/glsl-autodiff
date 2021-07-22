@@ -22,12 +22,12 @@ export class VecElementRef extends Op {
   derivative(param: Param) { return `${this.dependsOn[0].derivRef(param)}.${this.prop}` }
 }
 
-export class VecParamElementRef extends OpLiteral {
+export class VecParamElementRef extends Param {
   public prop: string
   public name: string
 
   constructor(ad: ADBase, prop: string, vec: VecOp) {
-    super(ad, vec)
+    super(ad, `_glslad_r${vec.id}_${prop}`, vec)
     this.prop = prop
     this.name = `_glslad_r${vec.id}_${prop}`
     this.ad.registerParam(this, this.name)

@@ -181,8 +181,8 @@ export class Value extends OpLiteral {
 export class Param extends OpLiteral {
   public name: string
 
-  constructor(ad: ADBase, name: string) {
-    super(ad)
+  constructor(ad: ADBase, name: string, ...dependsOn: Op[]) {
+    super(ad, ...dependsOn)
     this.name = name
     this.ad.registerParam(this, name)
   }
