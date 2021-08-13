@@ -2,10 +2,8 @@
 Tired of doing math to get normals in your vertex shader? Same. Use this library to write your function once and generate derivatives automatically!
 
 - <a href="#demo">Demo</a>
+  - <a href="#starter-code">Starter Code</a>
 - <a href="#why">Why?</a>
-  - <a href="#eg-1d-plane-displacement">e.g. 1D Plane Displacement</a>
-  - <a href="#eg-1d-mesh-displacement">e.g. 1D Mesh Displacement</a>
-  - <a href="#eg-3d-mesh-displacement">e.g. 3D Mesh Displacement</a>
 - <a href="#api-usage">API Usage</a>
   - <a href="#inputs-and-outputs">Inputs and Outputs</a>
   - <a href="#operations">Operations</a>
@@ -18,6 +16,23 @@ Tired of doing math to get normals in your vertex shader? Same. Use this library
 ![airplane-small](https://user-images.githubusercontent.com/5315059/129101559-4f394a4c-ea3d-489f-9796-cff224aa277d.gif)
 
 <a href="https://editor.p5js.org/davepagurek/sketches/sQZGnfyKt">Live version in the p5 editor</a>
+
+### Starter Code
+
+<table>
+  <tr>
+    <th>Autodiff + Sphere mapped lighting</th>
+    <th>Autodiff + Sphere mapped lighting + bump mapping</th>
+  </tr>
+  <tr>
+    <td><a href="https://editor.p5js.org/davepagurek/sketches/PN4MnpC15">P5 Editor template</a></td>
+    <td><a href="https://editor.p5js.org/davepagurek/sketches/hJEHTTXUN">P5 Editor template</a></td>
+  </tr>
+  <tr>
+    <td><a href="https://codepen.io/pen/?template=BaRbezz">CodePen template</a></td>
+    <td><a href="https://codepen.io/pen/?template=poPYmda">CodePen template</a></td>
+  </tr>
+</table>
 
 ## Why?
 
