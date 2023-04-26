@@ -1,4 +1,4 @@
-import { Input, Op, Param, ADBase, ADConstructor, UserInput, NeOp, EqOp, AndOp, Value } from './base'
+import { Input, Op, Param, ADBase, ADConstructor, UserInput, EqOp, AndOp, Value } from './base'
 import { Vec, VecParam, VectorOp, WithVecDependencies, ScalarWithVecDependencies, OffsetJacobian } from './vecBase'
 import { VecMult, VecSum } from './vecArithmetic'
 
@@ -204,8 +204,8 @@ Op.prototype.vecIfElse = UserInput(function(thenOp: VectorOp, elseOp: VectorOp) 
 VectorOp.prototype.adjustNormal = function(normal: VecParam, position: VecParam) {
   const x = new Vec(this.ad, ...this.ad.convertVals([1, 0, 0]))
   const y = new Vec(this.ad, ...this.ad.convertVals([0, 1, 0]))
-  const yEq0 = new NeOp(this.ad, normal.y(), new Value(this.ad, 0))
-  const zEq0 = new NeOp(this.ad, normal.z(), new Value(this.ad, 0))
+  const yEq0 = new EqOp(this.ad, normal.y(), new Value(this.ad, 0))
+  const zEq0 = new EqOp(this.ad, normal.z(), new Value(this.ad, 0))
   const normalIsX = new AndOp(this.ad, yEq0, zEq0)
   const other = normalIsX.vecIfElse(y, x)
   const v = new Cross(this.ad, other, normal)

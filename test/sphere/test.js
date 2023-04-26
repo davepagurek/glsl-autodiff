@@ -49,8 +49,8 @@ void main(void) {
   vTexCoord = aTexCoord;
   vPosition = worldSpacePosition.xyz;
   //vNormal = uNormalMatrix * aNormal;
-  //normal=cross(_glslad_v61,_glslad_v60);
-  //normal=_glslad_v61;
+  //normal=cross(_glslad_v67,_glslad_v66);
+  //normal=_glslad_v66;
   vNormal = uNormalMatrix * normal;
 }
 `
