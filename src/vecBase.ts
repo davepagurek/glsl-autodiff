@@ -1,4 +1,4 @@
-import { Op, OpLiteral, ADBase, Param, Input, ADConstructor, UserInput } from './base'
+import { Op, OpLiteral, ADBase, Param, Input, ADConstructor, UserInput, EqOp } from './base'
 
 export interface VecOp extends Op {
   x(): Op
@@ -57,6 +57,8 @@ export function Cache(target: Object, propertyKey: string, descriptor: PropertyD
   }
   return descriptor
 }
+
+
 
 export abstract class VectorOp extends Op {
   scalar() { return false }
@@ -243,6 +245,71 @@ export abstract class ScalarWithVecDependencies extends Op {
   }
 }
 
+export class OffsetJacobian extends WithVecDependencies {
+  constructor(ad, ...args) {
+    super(ad, ...args)
+    this.internalDerivatives.push(
+      { op: this.offset(), param: this.position().x() },
+      { op: this.offset(), param: this.position().y() },
+      { op: this.offset(), param: this.position().z() },
+    )
+    for (const { op } of this.internalDerivatives) {
+      op.usedIn.push(this)
+    }
+  }
+
+  public size(): number {
+    return 3
+  }
+
+  private position() {
+    return this.dependsOn[0] as VecParam
+  }
+
+  private offset() {
+    return this.dependsOn[1] as VectorOp
+  }
+
+  glslType() {
+    return 'mat3'
+  }
+
+  definition() {
+    const dodx = this.offset().derivRef(this.position().x())
+    const dody = this.offset().derivRef(this.position().y())
+    const dodz = this.offset().derivRef(this.position().z())
+    return `mat3(${dodx},${dody},${dodz})`
+  }
+  derivative(_param: Param): string {
+    throw new Error('Unimplemented')
+  }
+
+  public dot(vec3: VectorOp) {
+    return new Mat3Dot(this.ad, this, vec3)
+  }
+}
+
+export class Mat3Dot extends VectorOp {
+  public size() {
+    return 3
+  }
+
+  private mat3() {
+    return this.dependsOn[0] as OffsetJacobian
+  }
+
+  private vec3() {
+    return this.dependsOn[1] as VectorOp
+  }
+
+  definition() {
+    return `${this.mat3().ref()}*${this.vec3().ref()}`
+  }
+  derivative(_param: Param): string {
+    throw new Error('Unimplemented')
+  }
+}
+
 export class Vec extends VectorOp {
   public size(): number {
     return this.dependsOn.length
@@ -273,16 +340,16 @@ export class VecParam extends VectorOp {
   }
 
   @Cache
-  public x(): Op { return new VecParamElementRef(this.ad, 'x', this) }
+  public x() { return new VecParamElementRef(this.ad, 'x', this) }
 
   @Cache
-  public y(): Op { return new VecParamElementRef(this.ad, 'y', this) }
+  public y() { return new VecParamElementRef(this.ad, 'y', this) }
 
   @Cache
-  public z(): Op { return new VecParamElementRef(this.ad, 'z', this) }
+  public z() { return new VecParamElementRef(this.ad, 'z', this) }
 
   @Cache
-  public w(): Op { return new VecParamElementRef(this.ad, 'w', this) }
+  public w() { return new VecParamElementRef(this.ad, 'w', this) }
 
   private getElems() {
     return 'xyzw'
