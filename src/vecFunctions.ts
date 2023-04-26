@@ -1,6 +1,8 @@
-import { Input, Op, Param, ADBase, ADConstructor, UserInput, EqOp, AndOp, Value } from './base'
+import { Input, Op, Param, ADBase, ADConstructor, UserInput, EqOp, AndOp, Value, LtOp } from './base'
 import { Vec, VecParam, VectorOp, WithVecDependencies, ScalarWithVecDependencies, OffsetJacobian } from './vecBase'
 import { VecMult, VecSum } from './vecArithmetic'
+import { Abs } from './functions'
+import { Mult } from './arithmetic'
 
 export class VecMix extends WithVecDependencies {
   definition() {
@@ -79,6 +81,32 @@ export class VecIfElse extends WithVecDependencies {
   derivative(param: Param) {
     const [condition, thenOp, elseOp] = this.dependsOn
     return `${condition.ref()}?${thenOp.derivRef(param)}:${elseOp.derivRef(param)}`
+  }
+}
+
+export class VecNormalize extends WithVecDependencies {
+  override size() {
+    return this.vecDependsOn[0].size()
+  }
+  definition() {
+    const [input] = this.dependsOn
+    return `normalize(${input.ref()})`
+  }
+  derivative(param: Param): string {
+    throw new Error('unimplemented')
+  }
+}
+
+export class VecAbs extends WithVecDependencies {
+  override size() {
+    return this.vecDependsOn[0].size()
+  }
+  definition() {
+    const [input] = this.dependsOn
+    return `abs(${input.ref()})}`
+  }
+  derivative(param: Param): string {
+    return '0.0'
   }
 }
 
@@ -208,8 +236,29 @@ VectorOp.prototype.adjustNormal = function(normal: VecParam, position: VecParam)
   const zEq0 = new EqOp(this.ad, normal.z(), new Value(this.ad, 0))
   const normalIsX = new AndOp(this.ad, yEq0, zEq0)
   const other = normalIsX.vecIfElse(y, x)
-  const v = new Cross(this.ad, other, normal)
-  const u = new Cross(this.ad, v, normal)
+  /*const yEq0 = new LtOp(this.ad, new Abs(this.ad, normal.y()), new Value(this.ad, 0.2))
+  const zEq0 = new LtOp(this.ad, new Abs(this.ad, normal.z()), new Value(this.ad, 0.2))
+  const normalIsX = new AndOp(this.ad, yEq0, zEq0)
+  const other = normalIsX.vecIfElse(y, x)*/
+  /*const normalDotX = new Abs(this.ad, new Dot(this.ad, normal, x))
+  const normalDotY = new Abs(this.ad, new Dot(this.ad, normal, y))
+  const other = new VecNormalize(
+    this.ad,
+    new VecMix(
+      this.ad,
+      y,
+      x,
+      new Mult(
+        this.ad,
+        normalDotX,
+        normalDotY
+      ),
+    ),
+  )*/
+  //const v = new Cross(this.ad, other, normal)
+  //const u = new Cross(this.ad, v, normal)
+  const v = new VecNormalize(this.ad, new Cross(this.ad, other, normal))
+  const u = new VecNormalize(this.ad, new Cross(this.ad, v, normal))
   const jacobian = new OffsetJacobian(this.ad, position, this)
   const dodu = new VecMult(this.ad, jacobian, u)
   const dodv = new VecMult(this.ad, jacobian, v)

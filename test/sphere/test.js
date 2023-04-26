@@ -49,7 +49,7 @@ void main(void) {
   vTexCoord = aTexCoord;
   vPosition = worldSpacePosition.xyz;
   //vNormal = uNormalMatrix * aNormal;
-  //normal=cross(_glslad_v67,_glslad_v66);
+  //normal=cross(_glslad_v66,_glslad_v65);
   //normal=_glslad_v66;
   vNormal = uNormalMatrix * normal;
 }
@@ -76,6 +76,7 @@ void main(void) {
   vec3 materialColor = texture2D(img, vTexCoord).rgb;
   vec3 normal = normalize(vNormal);
   gl_FragColor = vec4(abs(normal), 1.); return;
+  //gl_FragColor = length(vNormal) * vec4(1.); return;
   vec3 color = vec3(0.0, 0.0, 0.0);
   for (int i = 0; i < MAX_LIGHTS; i++) {
     if (i >= numLights) break;
