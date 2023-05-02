@@ -85,7 +85,7 @@ class AutoDiffImpl implements ADBase {
 // TODO figure out a better way of writing this that Typescript can still infer the type of
 const ExtendedAD = WithVecFunctions(WithVecArithmetic(WithVecBase(WithFunctions(WithArithmetic(AutoDiffImpl)))))
 type GetType<T> = T extends new (...args: any[]) => infer V ? V : never
-type AD = GetType<typeof ExtendedAD>
+export type AD = GetType<typeof ExtendedAD>
 
 export const gen = (cb: (ad: AD) => void, settings: Partial<ADSettings> = {}): string => {
   const ad = new ExtendedAD()

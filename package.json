@@ -14,7 +14,9 @@
   },
   "homepage": "https://github.com/davepagurek/glsl-autodiff",
   "dependencies": {
-    "lodash": "^4.17.21"
+    "@types/p5": "^1.6.1",
+    "lodash": "^4.17.21",
+    "p5": "^1.6.0"
   },
   "devDependencies": {
     "@types/node": "^15.12.5",

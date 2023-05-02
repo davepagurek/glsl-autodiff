@@ -2,9 +2,26 @@ const path = require('path');
 
 module.exports = (env, argv) => {
   const mode = argv.mode ?? 'production'
-  const config = {
+  const configs = [
+    {
+      entry: './index.ts',
+      output: {
+        filename: 'autodiff.js',
+        path: path.resolve(__dirname, 'build'),
+        libraryTarget: 'umd',
+        library: 'AutoDiff',
+      },
+    },
+    {
+      entry: './p5.warp.ts',
+      output: {
+        filename: 'p5.warp.js',
+        path: path.resolve(__dirname, 'build'),
+      },
+    },
+  ].map((partialConfig) => ({
+    ...partialConfig,
     context: path.resolve(__dirname, 'src'),
-    entry: './index.ts',
     mode,
     module: {
       rules: [{
@@ -13,20 +30,15 @@ module.exports = (env, argv) => {
         exclude: /node_modules/
       }]
     },
-    output: {
-      filename: 'autodiff.js',
-      path: path.resolve(__dirname, 'build'),
-      libraryTarget: 'umd',
-      library: 'AutoDiff',
-    },
     resolve: {
       extensions: ['.tsx', '.ts', '.jsx', '.js']
     },
-  }
+  }));
 
-  if (mode === 'development') {
-    config.devtool = 'inline-source-map'
-  }
-
-  return config
+  return configs.map((config) => {
+    if (mode === 'development') {
+      config.devtool = 'inline-source-map'
+    }
+    return config;
+  })
 };
