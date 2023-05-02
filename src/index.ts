@@ -58,47 +58,23 @@ class AutoDiffImpl implements ADBase {
 
     // Add initializers for outputs
     const deps = new Set<Op>()
-    for (const name in this.outputs) {
-      for (const dep of this.outputs[name].deepDependencies().values()) {
-        deps.add(dep)
-      }
-      deps.add(this.outputs[name])
-    }
-    for (const param in this.derivOutputs) {
-      for (const name in this.derivOutputs[param]) {
-        for (const dep of this.derivOutputs[param][name].deepDependencies().values()) {
-          deps.add(dep)
-        }
-        deps.add(this.derivOutputs[param][name])
-      }
-    }
-    for (const dep of deps.values()) {
-      code += dep.initializer()
-    }
+    const derivDeps = new Map<Param, Set<Op>>()
 
-    // Add outputs
     for (const name in this.outputs) {
+      code += this.outputs[name].outputDependencies({ deps, derivDeps })
+      code += this.outputs[name].initializer()
+      deps.add(this.outputs[name])
       code += `${this.outputs[name].glslType()} ${name}=${this.outputs[name].ref()};\n`
     }
-
     for (const param in this.derivOutputs) {
       const paramOp = this.params[param]
-
-      // Add initializers for derivative outputs
-      const derivDeps = new Set<Op>()
       for (const name in this.derivOutputs[param]) {
-        for (const dep of this.derivOutputs[param][name].deepDependencies().values()) {
-          derivDeps.add(dep)
-        }
-        derivDeps.add(this.derivOutputs[param][name])
-      }
-      for (const dep of derivDeps.values()) {
-        code += dep.derivInitializer(paramOp)
-      }
-
-      // Add derivative outputs
-      for (const name in this.derivOutputs[param]) {
+        code += this.derivOutputs[param][name].outputDerivDependencies(paramOp, { deps, derivDeps })
+        code += this.derivOutputs[param][name].derivInitializer(paramOp)
         code += `${this.derivOutputs[param][name].glslType()} ${name}=${this.derivOutputs[param][name].derivRef(paramOp)};\n`
+        const paramDerivDeps = derivDeps.get(paramOp) ?? new Set<Op>()
+        paramDerivDeps.add(this.derivOutputs[param][name])
+        derivDeps.set(paramOp, paramDerivDeps)
       }
     }
 
@@ -109,7 +85,7 @@ class AutoDiffImpl implements ADBase {
 // TODO figure out a better way of writing this that Typescript can still infer the type of
 const ExtendedAD = WithVecFunctions(WithVecArithmetic(WithVecBase(WithFunctions(WithArithmetic(AutoDiffImpl)))))
 type GetType<T> = T extends new (...args: any[]) => infer V ? V : never
-type AD = GetType<typeof ExtendedAD>
+export type AD = GetType<typeof ExtendedAD>
 
 export const gen = (cb: (ad: AD) => void, settings: Partial<ADSettings> = {}): string => {
   const ad = new ExtendedAD()

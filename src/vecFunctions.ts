@@ -1,5 +1,8 @@
-import { Input, Op, Param, ADBase, ADConstructor, UserInput } from './base'
-import { VectorOp, WithVecDependencies, ScalarWithVecDependencies } from './vecBase'
+import { Input, Op, Param, ADBase, ADConstructor, UserInput, EqOp, AndOp, Value, LtOp } from './base'
+import { Vec, VecParam, VectorOp, WithVecDependencies, ScalarWithVecDependencies, OffsetJacobian } from './vecBase'
+import { VecMult, VecSum } from './vecArithmetic'
+import { Abs } from './functions'
+import { Mult } from './arithmetic'
 
 export class VecMix extends WithVecDependencies {
   definition() {
@@ -81,6 +84,32 @@ export class VecIfElse extends WithVecDependencies {
   }
 }
 
+export class VecNormalize extends WithVecDependencies {
+  override size() {
+    return this.vecDependsOn[0].size()
+  }
+  definition() {
+    const [input] = this.dependsOn
+    return `normalize(${input.ref()})`
+  }
+  derivative(param: Param): string {
+    throw new Error('unimplemented')
+  }
+}
+
+export class VecAbs extends WithVecDependencies {
+  override size() {
+    return this.vecDependsOn[0].size()
+  }
+  definition() {
+    const [input] = this.dependsOn
+    return `abs(${input.ref()})}`
+  }
+  derivative(param: Param): string {
+    return '0.0'
+  }
+}
+
 export class Dot extends ScalarWithVecDependencies {
   definition() {
     return `dot(${this.dependsOn.map((v) => v.ref()).join(',')})`
@@ -126,6 +155,32 @@ export class Dist extends ScalarWithVecDependencies {
   }
 }
 
+export class Cross extends WithVecDependencies {
+  override size() {
+    return this.vecDependsOn[0].size()
+  }
+  definition() {
+    const [a, b] = this.dependsOn
+    return `cross(${a.ref()},${b.ref()})`
+  }
+  derivative(param: Param): string {
+    throw new Error('unimplemented')
+  }
+}
+
+export class Normalize extends WithVecDependencies {
+  override size() {
+    return this.vecDependsOn[0].size()
+  }
+  definition() {
+    const [a, b] = this.dependsOn
+    return `normalize(${a.ref()}})`
+  }
+  derivative(param: Param): string {
+    throw new Error('unimplemented')
+  }
+}
+
 declare module './vecBase' {
   interface VectorOp {
     mix(other: VectorOp, amt: Input): VectorOp
@@ -135,6 +190,7 @@ declare module './vecBase' {
     dot(other: VectorOp): Op
     length(): Op
     dist(other: VectorOp): Op
+    adjustNormal(normal: VecParam, position: VecParam): VectorOp
   }
 }
 declare module './base' {
@@ -173,6 +229,24 @@ VectorOp.prototype.dist = UserInput(function(other: VectorOp) {
 Op.prototype.vecIfElse = UserInput(function(thenOp: VectorOp, elseOp: VectorOp) {
   return new VecIfElse(this.ad, this, thenOp, elseOp)
 })
+VectorOp.prototype.adjustNormal = function(normal: VecParam, position: VecParam) {
+  const x = new Vec(this.ad, ...this.ad.convertVals([1, 0, 0]))
+  const y = new Vec(this.ad, ...this.ad.convertVals([0, 1, 0]))
+  const yEq0 = new EqOp(this.ad, normal.y(), new Value(this.ad, 0))
+  const zEq0 = new EqOp(this.ad, normal.z(), new Value(this.ad, 0))
+  const normalIsX = new AndOp(this.ad, yEq0, zEq0)
+  const other = normalIsX.vecIfElse(y, x)
+  const v = new VecNormalize(this.ad, new Cross(this.ad, other, normal))
+  const u = new Cross(this.ad, v, normal)
+  const jacobian = new OffsetJacobian(this.ad, position, this)
+  const dodu = new VecMult(this.ad, jacobian, u)
+  const dodv = new VecMult(this.ad, jacobian, v)
+  return new Cross(
+    this.ad,
+    new VecSum(this.ad, u, dodu),
+    new VecSum(this.ad, v, dodv),
+  )
+}
 
 export function WithVecFunctions<T extends ADConstructor>(Base: T) {
   class AutoDiff extends Base {

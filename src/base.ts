@@ -56,6 +56,7 @@ export abstract class Op {
   public dependsOn: Op[]
   public usedIn: Op[] = []
   public srcLine: string = ''
+  public internalDerivatives: { op: Op, param: Param }[] = []
 
   constructor(ad: ADBase, ...params: Op[]) {
     this.ad = ad
@@ -106,7 +107,7 @@ export abstract class Op {
 
   public derivRef(param: Param): string {
     if (this.useTempVar()) {
-      return `_glslad_dv${this.id}_d${param.name}`
+      return `_glslad_dv${this.id}_d${param.safeName()}`
     } else {
       return `(${this.derivative(param)})`
     }
@@ -137,15 +138,58 @@ export abstract class Op {
     return this.dependsOn.every((op) => op.isConst())
   }
 
-  public deepDependencies(): Set<Op> {
-    const deps = new Set<Op>()
+  public outputDependencies({ deps, derivDeps }: { deps: Set<Op>; derivDeps: Map<Param, Set<Op>> }): string {
+    let code = ''
     for (const op of this.dependsOn) {
-      for (const dep of op.deepDependencies().values()) {
-        deps.add(dep)
+      if (!deps.has(op)) {
+        deps.add(op)
+        code += op.outputDependencies({ deps, derivDeps })
+        code += op.initializer()
       }
-      deps.add(op)
     }
-    return deps
+
+    for (const { param, op } of this.internalDerivatives) {
+      if (!derivDeps.get(param)?.has(op)) {
+        const paramDerivDeps = derivDeps.get(param) ?? new Set<Op>()
+        paramDerivDeps.add(op)
+        derivDeps.set(param, paramDerivDeps)
+        code += op.outputDerivDependencies(param, { deps, derivDeps })
+        code += op.derivInitializer(param)
+      }
+    }
+    
+    return code
+  }
+
+  public outputDerivDependencies(param: Param, { deps, derivDeps }: { deps: Set<Op>; derivDeps: Map<Param, Set<Op>> }): string {
+    let code = ''
+    for (const op of this.dependsOn) {
+      if (!deps.has(op)) {
+        deps.add(op)
+        code += op.outputDependencies({ deps, derivDeps })
+        code += op.initializer()
+      }
+
+      if (!derivDeps.get(param)?.has(op)) {
+        const paramDerivDeps = derivDeps.get(param) ?? new Set<Op>()
+        paramDerivDeps.add(op)
+        derivDeps.set(param, paramDerivDeps)
+        code += op.outputDerivDependencies(param, { deps, derivDeps })
+        code += op.derivInitializer(param)
+      }
+    }
+
+    for (const { param, op } of this.internalDerivatives) {
+      if (!derivDeps.get(param)?.has(op)) {
+        const paramDerivDeps = derivDeps.get(param) ?? new Set<Op>()
+        paramDerivDeps.add(op)
+        derivDeps.set(param, paramDerivDeps)
+        code += op.outputDependencies({ deps, derivDeps })
+        code += op.derivInitializer(param)
+      }
+    }
+    
+    return code
   }
 
   public output(name: string) { return this.ad.output(name, this) }
@@ -153,6 +197,81 @@ export abstract class Op {
 
   public abstract definition(): string
   public abstract derivative(param: Param): string
+}
+
+export abstract class BooleanOp extends Op {
+  abstract operator(): string
+  definition() {
+    return this.dependsOn.map((op) => op.ref()).join(this.operator())
+  }
+  derivative(): string {
+    throw new Error('unimplemented')
+  }
+  isConst() {
+    // They might not actually be constant, but we don't have derivatives
+    // for these so we just treat them like they are
+    return true;
+  }
+  glslType() {
+    return 'bool'
+  }
+}
+
+export class EqOp extends BooleanOp {
+  operator() {
+    return '=='
+  }
+}
+
+export class NeOp extends BooleanOp {
+  operator() {
+    return '!='
+  }
+}
+
+export class LtOp extends BooleanOp {
+  operator() {
+    return '<'
+  }
+}
+
+export class LeOp extends BooleanOp {
+  operator() {
+    return '<='
+  }
+}
+
+export class GtOp extends BooleanOp {
+  operator() {
+    return '>'
+  }
+}
+
+export class GeOp extends BooleanOp {
+  operator() {
+    return '>='
+  }
+}
+
+export class NotOp extends BooleanOp {
+  operator() {
+    return '!'
+  }
+  definition() {
+    return this.operator() + this.dependsOn[0].ref()
+  }
+}
+
+export class AndOp extends BooleanOp {
+  operator() {
+    return '&&'
+  }
+}
+
+export class OrOp extends BooleanOp {
+  operator() {
+    return '||'
+  }
 }
 
 export abstract class OpLiteral extends Op {
@@ -185,6 +304,18 @@ export class Param extends OpLiteral {
     super(ad, ...dependsOn)
     this.name = name
     this.ad.registerParam(this, name)
+  }
+
+  safeName() {
+    // A version of the name that can be used in temp variable
+    // names
+    return this.name.split('').map((c) => {
+      if (c.match(/[\w\d]/)) {
+        return c
+      } else {
+        return '_'
+      }
+    }).join('') + this.id // Add id to ensure uniqueness
   }
 
   isConst() { return false }

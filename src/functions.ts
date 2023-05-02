@@ -71,6 +71,15 @@ export class IfElse extends Op {
   }
 }
 
+export class Abs extends Op {
+  definition() {
+    return `abs(${this.dependsOn[0].ref()})`
+  }
+  derivative(param: Param) {
+    return '0.0'
+  }
+}
+
 declare module './base' {
   interface Op {
     sin(): Op
