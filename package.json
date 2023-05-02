@@ -1,6 +1,6 @@
 {
   "name": "@davepagurek/glsl-autodiff",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "main": "build/autodiff.js",
   "author": "Dave Pagurek <dave@davepagurek.com>",
   "license": "MIT",
@@ -14,9 +14,7 @@
   },
   "homepage": "https://github.com/davepagurek/glsl-autodiff",
   "dependencies": {
-    "@types/p5": "^1.6.1",
-    "lodash": "^4.17.21",
-    "p5": "^1.6.0"
+    "lodash": "^4.17.21"
   },
   "devDependencies": {
     "@types/node": "^15.12.5",

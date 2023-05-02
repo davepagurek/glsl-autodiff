@@ -236,30 +236,8 @@ VectorOp.prototype.adjustNormal = function(normal: VecParam, position: VecParam)
   const zEq0 = new EqOp(this.ad, normal.z(), new Value(this.ad, 0))
   const normalIsX = new AndOp(this.ad, yEq0, zEq0)
   const other = normalIsX.vecIfElse(y, x)
-  /*const yEq0 = new LtOp(this.ad, new Abs(this.ad, normal.y()), new Value(this.ad, 0.2))
-  const zEq0 = new LtOp(this.ad, new Abs(this.ad, normal.z()), new Value(this.ad, 0.2))
-  const normalIsX = new AndOp(this.ad, yEq0, zEq0)
-  const other = normalIsX.vecIfElse(y, x)*/
-  /*const normalDotX = new Abs(this.ad, new Dot(this.ad, normal, x))
-  const normalDotY = new Abs(this.ad, new Dot(this.ad, normal, y))
-  const other = new VecNormalize(
-    this.ad,
-    new VecMix(
-      this.ad,
-      y,
-      x,
-      new Mult(
-        this.ad,
-        normalDotX,
-        normalDotY
-      ),
-    ),
-  )*/
-  //const v = new Cross(this.ad, other, normal)
-  //const u = new Cross(this.ad, v, normal)
   const v = new VecNormalize(this.ad, new Cross(this.ad, other, normal))
   const u = new Cross(this.ad, v, normal)
-  //const u = new VecNormalize(this.ad, new Cross(this.ad, v, normal))
   const jacobian = new OffsetJacobian(this.ad, position, this)
   const dodu = new VecMult(this.ad, jacobian, u)
   const dodv = new VecMult(this.ad, jacobian, v)
