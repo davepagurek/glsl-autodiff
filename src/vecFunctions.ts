@@ -241,11 +241,11 @@ VectorOp.prototype.adjustNormal = function(normal: VecParam, position: VecParam)
   const jacobian = new OffsetJacobian(this.ad, position, this)
   const dodu = new VecMult(this.ad, jacobian, u)
   const dodv = new VecMult(this.ad, jacobian, v)
-  return new Cross(
+  return new VecNormalize(this.ad, new Cross(
     this.ad,
     new VecSum(this.ad, u, dodu),
     new VecSum(this.ad, v, dodv),
-  )
+  ))
 }
 
 export function WithVecFunctions<T extends ADConstructor>(Base: T) {
