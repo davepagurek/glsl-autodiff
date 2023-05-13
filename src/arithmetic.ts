@@ -45,7 +45,7 @@ export class Pow extends Op {
   derivative(param: Param) {
     const [a, b] = this.dependsOn
     if (b.isConst()) {
-      return `${b.ref()}*pow(${a.ref()},${b.ref()}-1.0)`
+      return `${b.ref()}*pow(${a.ref()},${b.ref()}-1.0)*${a.derivRef(param)}`
     } else if (a.isConst()) {
       return `pow(${a.ref()},${b.ref()})*log(${a.ref()})*${b.derivRef(param)}`
     } else {
