@@ -24,7 +24,15 @@ export class Mult extends Op {
   }
   derivative(param: Param) {
     const [f, g] = this.dependsOn
-    return `${f.ref()}*${g.derivRef(param)}+${g.ref()}*${f.derivRef(param)}`
+    const fIsConst = f.isConst(param)
+    const gIsConst = g.isConst(param)
+    if (fIsConst && !gIsConst) {
+      return `${f.ref()}*${g.derivRef(param)}`
+    } else if (!fIsConst && gIsConst) {
+      return `${g.ref()}*${f.derivRef(param)}`
+    } else {
+      return `${f.ref()}*${g.derivRef(param)}+${g.ref()}*${f.derivRef(param)}`
+    }
   }
 }
 

@@ -105,8 +105,14 @@ export abstract class Op {
     }
   }
 
+  public zeroDerivative() {
+    return '0.0'
+  }
+
   public derivRef(param: Param): string {
-    if (this.useTempVar()) {
+    if (this.isConst(param)) {
+      return this.zeroDerivative()
+    } else if (this.useTempVar()) {
       return `_glslad_dv${this.id}_d${param.safeName()}`
     } else {
       return `(${this.derivative(param)})`
@@ -127,15 +133,15 @@ export abstract class Op {
   }
 
   public derivInitializer(param: Param): string {
-    if (this.useTempVar()) {
-      return `${this.glslType()} ${this.derivRef(param)}=${this.derivative(param)};\n`
-    } else {
+    if (this.isConst(param) || !this.useTempVar()) {
       return ''
+    } else {
+      return `${this.glslType()} ${this.derivRef(param)}=${this.derivative(param)};\n`
     }
   }
 
-  public isConst(): boolean {
-    return this.dependsOn.every((op) => op.isConst())
+  public isConst(param?: Param): boolean {
+    return this.dependsOn.every((op) => op.isConst(param))
   }
 
   public outputDependencies({ deps, derivDeps }: { deps: Set<Op>; derivDeps: Map<Param, Set<Op>> }): string {
@@ -162,6 +168,7 @@ export abstract class Op {
   }
 
   public outputDerivDependencies(param: Param, { deps, derivDeps }: { deps: Set<Op>; derivDeps: Map<Param, Set<Op>> }): string {
+    if (this.isConst()) return ''
     let code = ''
     for (const op of this.dependsOn) {
       if (!deps.has(op)) {
@@ -170,7 +177,7 @@ export abstract class Op {
         code += op.initializer()
       }
 
-      if (!derivDeps.get(param)?.has(op)) {
+      if (!derivDeps.get(param)?.has(op) && !op.isConst(param)) {
         const paramDerivDeps = derivDeps.get(param) ?? new Set<Op>()
         paramDerivDeps.add(op)
         derivDeps.set(param, paramDerivDeps)
@@ -318,7 +325,13 @@ export class Param extends OpLiteral {
     }).join('') + this.id // Add id to ensure uniqueness
   }
 
-  isConst() { return false }
+  isConst(param?: Param) {
+    if (param) {
+      return param !== this
+    } else {
+      return false
+    }
+  }
   definition() { return this.name }
   derivative(param: Param) {
     if (param === this) {

@@ -33,6 +33,14 @@ export class VecParamElementRef extends Param {
     this.ad.registerParam(this, this.name)
   }
 
+  public isConst(param?: Param) {
+    if (param) {
+      return param !== this
+    } else {
+      return false
+    }
+  }
+
   definition() { return `${this.dependsOn[0].ref()}.${this.prop}` }
   derivative(param: Param) {
     if (param === this) {
@@ -89,6 +97,14 @@ export abstract class VectorOp extends Op {
     } else {
       throw new Error(`Can't get element ref ${el}`)
     }
+  }
+
+  public glslType() {
+    return `vec${this.size()}`
+  }
+
+  zeroDerivative() {
+    return `${this.glslType()}(0.0)`
   }
 
   public u() { return this.x() }
@@ -363,13 +379,21 @@ export class VecParam extends VectorOp {
     return `vec${this.size()}(${this.getElems().map((el) => el.derivRef(param)).join(',')})`
   }
 
+  public isConst(param?: Param) {
+    if (param) {
+      return param !== this.x() && param !== this.y() && param !== this.z()
+    } else {
+      return false
+    }
+  }
+
   public override initializer() { return '' }
   public override ref() { return this.definition() }
   public override derivInitializer(param: Param) {
-    if (this.useTempVar()) {
-      return `vec${this.size()} ${this.derivRef(param)}=${this.derivative(param)};\n`
-    } else {
+    if (this.isConst(param) || !this.useTempVar()) {
       return ''
+    } else {
+      return `vec${this.size()} ${this.derivRef(param)}=${this.derivative(param)};\n`
     }
   }
 }
